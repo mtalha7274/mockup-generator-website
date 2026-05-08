@@ -10,14 +10,14 @@ This project is a single-page vanilla HTML/CSS/JS mockup editor. There is no bui
 ## Where To Change Things
 
 - **App state and data models:** `STATE`, `newCanvas()`, `newEl()`, and `nextZ()` define canvases, elements, selection, zoom, history, and defaults.
-- **Canvas rendering:** `renderAllCanvases()` orchestrates the visible mockups. The smaller helpers `createCanvasShell()`, `createCanvasChrome()`, `createCanvasDeleteButton()`, `createCanvasDuplicateButton()`, `createHiddenOverlay()`, and `appendCanvasInteractionLayers()` act like UI components.
+- **Canvas rendering:** `renderAllCanvases()` orchestrates the visible mockups. The smaller helpers `createCanvasShell()`, `createCanvasChrome()`, `createCanvasDeleteButton()`, `createCanvasDuplicateButton()`, and `appendCanvasInteractionLayers()` act like UI components.
 - **Element rendering:** `renderElements()`, `renderElementsForCanvas()`, `renderElInContainer()`, and `drawElVisual()` draw shapes, text, images, selection outlines, and handles.
 - **Canvas actions:** `addNewCanvas()`, `dupCanvas()`, `delCanvas()`, and `deleteCanvasWithConfirm()` manage adding, duplicating, and deleting mockups.
 - **Workspace interactions:** `setupWorkspace()`, `beginInsert()`, `beginRubber()`, `bindElEvents()`, `onPtrMove()`, and `onPtrUp()` handle clicking, drawing, dragging, resizing, rotating, and selection boxes.
 - **Snapping guides:** the `SNAP STATE & PERSISTENT GUIDE SYSTEM` section manages alignment guides while dragging.
 - **Right properties panel:** `renderPanel()` and the `build*Section()` functions create the controls for canvas and selected element properties.
 - **Top toolbar and left tools:** `setupToolbar()` wires undo/redo, zoom, canvas size, presets, export, the left tool buttons, and the left-panel plus button.
-- **Export:** `exportPNG()` uses `html2canvas` when available and falls back to canvas drawing helpers.
+- **Export:** `exportPNG()` exports all canvases as separate exact-size PNGs, using `html2canvas` when available and falling back to canvas drawing helpers.
 
 ## Notes For Future AI Edits
 

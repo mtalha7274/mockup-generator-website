@@ -186,33 +186,6 @@ body {
 .cv-chrome-btn.danger { color: #c92a2a; }
 .cv-chrome-btn.danger:hover { color: #a51111; }
 
-/* Hidden mockup overlay */
-.cv-hidden-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10045;
-  background: rgba(245,245,245,.96);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  pointer-events: auto;
-  color: #555;
-  font-size: 13px;
-}
-.cv-hidden-overlay[hidden] { display: none !important; }
-#btn-cv-show {
-  padding: 8px 18px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-sidebar);
-  color: var(--text);
-  cursor: pointer;
-  font-size: 12px;
-}
-#btn-cv-show:hover { background: #3a3a3a; }
-
 /* ── WORKSPACE ─────────────────────────────────────────── */
 #workspace {
   flex: 1;
@@ -240,7 +213,7 @@ body {
 }
 .canvas-container {
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   width: 100%;
   height: 100%;
   /* background set by JS */
@@ -630,7 +603,7 @@ function syncUndoRedo() {
 // CANVAS DATA
 // ═══════════════════════════════════════════════════════════
 function newCanvas(name, w, h) {
-  return { id: cvid(), name: name || 'Canvas', width: w || 1284, height: h || 2778, bgColor: '#ffffff', elements: [], hidden: false };
+  return { id: cvid(), name: name || 'Canvas', width: w || 1284, height: h || 2778, bgColor: '#ffffff', elements: [] };
 }
 
 function newEl(type, x, y, w, h) {
@@ -686,8 +659,7 @@ function renderAllCanvases() {
     const wrap = createCanvasShell(cv);
     const cvel = wrap.querySelector('.canvas-container');
 
-    cvel.appendChild(createCanvasChrome(cv));
-    cvel.appendChild(createHiddenOverlay(cv));
+    wrap.appendChild(createCanvasChrome(cv));
     appendCanvasInteractionLayers(cv, cvel);
     renderElementsForCanvas(cv, cvel);
 
@@ -731,9 +703,11 @@ function createCanvasShell(cv) {
 function createCanvasChrome(cv) {
   const chrome = document.createElement('div');
   chrome.className = 'cv-chrome';
-  chrome.style.top = (-44.5 / S.zoom) + 'px';
-  chrome.style.transform = `scale(${1 / S.zoom})`;
+  chrome.style.top = '-44.5px';
   chrome.style.transformOrigin = 'top right';
+  ['pointerdown', 'pointerup', 'click', 'dblclick'].forEach(type => {
+    chrome.addEventListener(type, e => e.stopPropagation());
+  });
 
   const actions = document.createElement('div');
   actions.className = 'cv-chrome-actions';
@@ -751,7 +725,8 @@ function createCanvasDeleteButton(cv) {
   btn.title = 'Delete canvas';
   btn.disabled = S.canvases.length <= 1;
   btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4h10M6 4V2.5h4V4M5 6v7M8 6v7M11 6v7M4 4l.6 10h6.8L12 4"/></svg>';
-  btn.onclick = () => deleteCanvasWithConfirm(cv.id);
+  btn.onclick = e => { e.preventDefault(); e.stopPropagation(); deleteCanvasWithConfirm(cv.id); };
+  btn.onpointerdown = e => e.stopPropagation();
   return btn;
 }
 
@@ -761,20 +736,9 @@ function createCanvasDuplicateButton(cv) {
   btn.className = 'cv-chrome-btn';
   btn.title = 'Duplicate canvas';
   btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M3 11V3h8"/></svg>';
-  btn.onclick = () => dupCanvas(cv.id);
+  btn.onclick = e => { e.preventDefault(); e.stopPropagation(); dupCanvas(cv.id); };
+  btn.onpointerdown = e => e.stopPropagation();
   return btn;
-}
-
-function createHiddenOverlay(cv) {
-  const overlay = document.createElement('div');
-  overlay.className = 'cv-hidden-overlay';
-  overlay.hidden = !cv.hidden;
-  overlay.style.cssText = 'position: absolute; inset: 0; z-index: 10045; background: rgba(245,245,245,.96); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; pointer-events: auto; color: #555; font-size: 13px;';
-  if (!overlay.hidden) {
-    overlay.innerHTML = '<span>Mockup is hidden</span><button type="button" style="padding: 8px 18px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-sidebar); color: var(--text); cursor: pointer; font-size: 12px;">Show mockup</button>';
-    overlay.querySelector('button').onclick = () => { cv.hidden = false; snap(); renderAll(); };
-  }
-  return overlay;
 }
 
 function appendCanvasInteractionLayers(cv, cvel) {
@@ -845,14 +809,15 @@ function renderElements() {
   [...cv.elements].sort((a, b) => a.zIndex - b.zIndex).forEach(el => renderEl(el));
 }
 
-function renderElementsForCanvas(cv, root) {
+function renderElementsForCanvas(cv, root, canvasIdOverride) {
   // Remove stale element divs
   root.querySelectorAll('.el').forEach(d => {
     if (!cv.elements.find(e => e.id === d.dataset.id)) d.remove();
   });
 
   // Sort by zIndex, render each
-  [...cv.elements].sort((a, b) => a.zIndex - b.zIndex).forEach(el => renderElInContainer(el, root, cv.id));
+  const canvasId = canvasIdOverride || cv.id;
+  [...cv.elements].sort((a, b) => a.zIndex - b.zIndex).forEach(el => renderElInContainer(el, root, canvasId));
 }
 
 function renderEl(el) {
@@ -1060,15 +1025,13 @@ function addNewCanvas() {
 }
 
 function updateCanvasChrome() {
-  const cv = activeCV(); if (!cv) return;
-  const ov = document.getElementById('cv-el')?.querySelector('.cv-hidden-overlay');
-  if (ov) ov.hidden = !cv.hidden;
+  // Canvas chrome is re-created during normal canvas renders.
 }
 
 function dupCanvas(id) {
   const src = S.canvases.find(c => c.id === id); if (!src) return;
   const copy = JSON.parse(JSON.stringify(src));
-  copy.id = cvid(); copy.name = src.name + ' Copy'; copy.hidden = false;
+  copy.id = cvid(); copy.name = src.name + ' Copy';
   copy.elements = copy.elements.map(e => ({ ...e, id: uid() }));
   const idx = S.canvases.findIndex(c => c.id === id);
   S.canvases.splice(idx + 1, 0, copy);
@@ -1092,12 +1055,6 @@ function deleteCanvasWithConfirm(id) {
   if (!cv || S.canvases.length === 1) return;
   if (!window.confirm(`Delete "${cv.name || 'Canvas'}"?`)) return;
   delCanvas(id);
-}
-
-function toggleCanvasHidden() {
-  const cv = activeCV(); if (!cv) return;
-  cv.hidden = !cv.hidden;
-  closeCvMenu(); snap(); renderAll();
 }
 
 function setupCanvasChrome() {
@@ -1209,8 +1166,8 @@ function buildCanvasPanel(root, cv) {
     snap();
   });
   body.appendChild(row(lbl('Name'), nameInp));
-  const wInp = numInput(cv.width, v => { cv.width  = v || cv.width;  applyCanvasSize(); snap(); });
-  const hInp = numInput(cv.height, v => { cv.height = v || cv.height; applyCanvasSize(); snap(); });
+  const wInp = numInput(cv.width, v => { cv.width  = Math.max(1, v || cv.width);  applyCanvasSize(); snap(); });
+  const hInp = numInput(cv.height, v => { cv.height = Math.max(1, v || cv.height); applyCanvasSize(); snap(); });
   wInp.style.flex = '1'; hInp.style.flex = '1';
   body.appendChild(row(lbl('Size'), wInp, document.createTextNode(' × '), hInp));
   body.appendChild(row(lbl('BG'),
@@ -1573,7 +1530,8 @@ function beginInsert(e) {
   const [dw, dh] = defaults[type] || [100,100];
   // Start at click pos; if user drags we'll expand from pos as origin
   const el = newEl(type, pos.x, pos.y, dw, dh);
-  activeCV().elements.push(el);
+  const cv = activeCV();
+  cv.elements.push(el);
   S.selIds = [el.id];
   renderEl(el); renderSelBox();
 
@@ -1612,7 +1570,7 @@ function bindElEvents(div) {
     const cv = activeCV();
     IX.origPositions = S.selIds.map(sid => {
       const sel = cv.elements.find(x => x.id === sid);
-      return sel ? { id: sid, x: sel.x, y: sel.y } : null;
+      return sel && !sel.locked ? { id: sid, x: sel.x, y: sel.y } : null;
     }).filter(Boolean);
     e.preventDefault();
     div.setPointerCapture(e.pointerId);
@@ -2150,59 +2108,96 @@ function ungroupSelected() {
 // ═══════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════
-function exportPNG() {
-  const cv = activeCV(); if (!cv) return;
-  const prevSel = [...S.selIds]; S.selIds = [];
-  renderAll();
-  const prevZoom = S.zoom; applyZoom(1, false);
+async function exportPNG() {
+  const canvases = [...S.canvases];
+  if (!canvases.length) return;
 
-  setTimeout(() => {
-    const container = document.getElementById('cv-el');
-    if (!container) return;
-    
-    const chromeEl = container.querySelector('.cv-chrome');
-    const ovEl = container.querySelector('.cv-hidden-overlay');
-    const prevCd = chromeEl ? chromeEl.style.display : '';
-    if (chromeEl) chromeEl.style.display = 'none';
-    const prevOvHidden = ovEl ? ovEl.hidden : true;
-    if (!cv.hidden && ovEl) ovEl.hidden = true;
+  for (let i = 0; i < canvases.length; i++) {
+    const canvas = await renderCanvasForExport(canvases[i]);
+    download(canvas, exportFileName(canvases[i], i));
+    await delay(180);
+  }
+}
 
-    const finishRestore = () => {
-      if (chromeEl) chromeEl.style.display = prevCd || '';
-      if (ovEl) ovEl.hidden = prevOvHidden;
-      S.selIds = prevSel;
-      applyZoom(prevZoom, false);
-      renderAll();
-    };
-
-    if (typeof html2canvas !== 'undefined') {
-      html2canvas(container, {
-        width: cv.width, height: cv.height, scale: 1,
-        useCORS: true, allowTaint: true,
+async function renderCanvasForExport(cv) {
+  if (typeof html2canvas !== 'undefined') {
+    const container = createExportContainer(cv);
+    document.body.appendChild(container);
+    await waitForImages(container);
+    try {
+      return await html2canvas(container, {
+        width: cv.width,
+        height: cv.height,
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
         backgroundColor: cv.bgColor || '#ffffff',
-        scrollX: 0, scrollY: 0
-      }).then(canvas => {
-        download(canvas, cv.name);
-        finishRestore();
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: cv.width,
+        windowHeight: cv.height
       });
-    } else {
-      // Fallback canvas export
-      const ec = document.createElement('canvas');
-      ec.width = cv.width; ec.height = cv.height;
-      const ctx = ec.getContext('2d');
-      ctx.fillStyle = cv.bgColor || '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-      [...cv.elements].sort((a,b)=>a.zIndex-b.zIndex).forEach(el => drawElCtx(ctx, el, 1));
-      download(ec, cv.name);
-      finishRestore();
+    } finally {
+      container.remove();
     }
-  }, 120);
+  }
+
+  const ec = document.createElement('canvas');
+  ec.width = cv.width; ec.height = cv.height;
+  const ctx = ec.getContext('2d');
+  ctx.fillStyle = cv.bgColor || '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  [...cv.elements].sort((a,b)=>a.zIndex-b.zIndex).forEach(el => drawElCtx(ctx, el, 1));
+  return ec;
+}
+
+function createExportContainer(cv) {
+  const container = document.createElement('div');
+  container.className = 'canvas-container export-canvas';
+  container.style.position = 'fixed';
+  container.style.left = '0';
+  container.style.top = '0';
+  container.style.width = cv.width + 'px';
+  container.style.height = cv.height + 'px';
+  container.style.background = cv.bgColor || '#ffffff';
+  container.style.overflow = 'hidden';
+  container.style.boxShadow = 'none';
+  container.style.transform = 'none';
+  container.style.pointerEvents = 'none';
+  container.style.zIndex = '-1';
+  container.dataset.canvasId = `export-${cv.id}`;
+  renderElementsForCanvas(cv, container, `export-${cv.id}`);
+  return container;
+}
+
+function waitForImages(root) {
+  const images = [...root.querySelectorAll('img')].filter(img => img.src);
+  return Promise.all(images.map(img => {
+    if (img.complete) return Promise.resolve();
+    if (img.decode) return img.decode().catch(() => {});
+    return new Promise(resolve => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+  }));
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function exportFileName(cv, index) {
+  const order = String(index + 1).padStart(2, '0');
+  const name = (cv.name || 'Canvas').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ') || 'Canvas';
+  return `${order}-${name}`;
 }
 
 function download(canvas, name) {
   const a = document.createElement('a');
   a.download = (name || 'canvas') + '.png';
   a.href = canvas.toDataURL('image/png');
+  document.body.appendChild(a);
   a.click();
+  a.remove();
 }
 
 // ─ Canvas 2D drawing (used in thumbnails + fallback export) ─
