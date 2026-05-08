@@ -81,6 +81,7 @@ body {
 .tb-input:focus { border-color: var(--accent); }
 #zoom-val { width: 54px; }
 #cv-w, #cv-h { width: 58px; }
+#mockup-gap { width: 58px; }
 .tb-select {
   height: 28px;
   padding: 0 6px;
@@ -492,6 +493,9 @@ select.pi option { background: #2a2a2a; }
   <button class="tb-btn" id="btn-zoom-in" title="Zoom in">+</button>
   <button class="tb-btn" id="btn-fit" title="Fit to view">Fit</button>
   <div class="tb-sep"></div>
+  <span class="tb-label">Gap</span>
+  <input class="tb-input" id="mockup-gap" type="number" min="0" max="600" value="40" title="Space between mockups">
+  <div class="tb-sep"></div>
   <span class="tb-label">Canvas</span>
   <input class="tb-input" id="cv-w" type="number" value="1284" title="Width">
   <span class="tb-label">×</span>
@@ -581,6 +585,7 @@ const S = {
   clipboard: [],
   tool: 'select',
   zoom: 1,
+  mockupGap: 40,
   history: [],
   hIdx: -1,
 };
@@ -596,7 +601,7 @@ const getEl    = id => { const cv = activeCV(); return cv ? cv.elements.find(e =
 // HISTORY
 // ═══════════════════════════════════════════════════════════
 function snap() {
-  const data = JSON.stringify({ canvases: S.canvases, activeId: S.activeId });
+  const data = JSON.stringify({ canvases: S.canvases, activeId: S.activeId, mockupGap: S.mockupGap });
   S.history.splice(S.hIdx + 1);
   S.history.push(data);
   if (S.history.length > 100) S.history.shift();
@@ -616,7 +621,7 @@ function redo() {
 }
 function restoreSnap() {
   const d = JSON.parse(S.history[S.hIdx]);
-  S.canvases = d.canvases; S.activeId = d.activeId; S.selIds = [];
+  S.canvases = d.canvases; S.activeId = d.activeId; S.mockupGap = d.mockupGap ?? 40; S.selIds = [];
   renderAll();
 }
 function syncUndoRedo() {
@@ -716,11 +721,13 @@ function renderAll() {
   renderAllCanvases();
   renderPanel();
   syncDimInputs();
+  syncGapInput();
 }
 
 function renderAllCanvases() {
   const scaler = document.getElementById('ws-scaler');
   scaler.innerHTML = '';
+  applyMockupGap();
 
   S.canvases.forEach(cv => {
     const wrap = createCanvasShell(cv);
@@ -831,6 +838,16 @@ function syncDimInputs() {
   document.getElementById('cv-h').value = cv.height;
 }
 
+function syncGapInput() {
+  const input = document.getElementById('mockup-gap');
+  if (input) input.value = S.mockupGap;
+}
+
+function applyMockupGap() {
+  const scaler = document.getElementById('ws-scaler');
+  if (scaler) scaler.style.gap = Math.max(0, S.mockupGap) + 'px';
+}
+
 // ═══════════════════════════════════════════════════════════
 // ZOOM
 // ═══════════════════════════════════════════════════════════
@@ -854,8 +871,9 @@ function fitCanvas() {
   if (S.canvases.length === 0) return;
   const maxW = Math.max(...S.canvases.map(c => c.width));
   const maxH = Math.max(...S.canvases.map(c => c.height));
-  const totalW = S.canvases.reduce((sum, c) => sum + c.width, 0) + (S.canvases.length - 1) * 40;
-  const zx = (ws.clientWidth  - WS_PAD * 2) / totalW;
+  const totalCanvasW = S.canvases.reduce((sum, c) => sum + c.width, 0);
+  const totalGap = Math.max(0, S.canvases.length - 1) * S.mockupGap;
+  const zx = (ws.clientWidth  - WS_PAD * 2 - totalGap) / totalCanvasW;
   const zy = (ws.clientHeight - WS_PAD * 2) / maxH;
   applyZoom(Math.min(zx, zy, 1), true);
 }
@@ -2144,6 +2162,16 @@ function setupToolbar() {
 
   const zv = document.getElementById('zoom-val');
   zv.addEventListener('change', () => { const v = parseFloat(zv.value); if (!isNaN(v)) applyZoom(v/100); });
+
+  const gapInp = document.getElementById('mockup-gap');
+  gapInp.addEventListener('change', () => {
+    const v = parseFloat(gapInp.value);
+    if (isNaN(v)) { syncGapInput(); return; }
+    S.mockupGap = Math.max(0, Math.min(600, v));
+    applyMockupGap();
+    syncGapInput();
+    snap();
+  });
 
   document.getElementById('cv-w').addEventListener('change', e => {
     const cv = activeCV(); if (!cv) return;
