@@ -98,6 +98,8 @@ test('export button opens a menu for project or mockup exports', () => {
   assert.match(html, /id="export-menu"/);
   assert.match(html, /id="export-project-option"/);
   assert.match(html, /id="export-mockups-option"/);
+  assert.match(html, /id="export-project-option"[\s\S]*<svg viewBox="0 0 16 16"[\s\S]*Project/);
+  assert.match(html, /id="export-mockups-option"[\s\S]*<svg viewBox="0 0 16 16"[\s\S]*Mockups/);
   assert.match(html, /toggleExportMenu/);
   assert.match(html, /export-project-option'\)\.addEventListener\('click', \(\) => runExportMenuAction\(exportProject\)\)/);
   assert.match(html, /export-mockups-option'\)\.addEventListener\('click', \(\) => runExportMenuAction\(exportPNG\)\)/);
