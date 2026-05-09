@@ -359,6 +359,108 @@ body {
   height: var(--placeholder-icon, 38px);
   overflow: visible;
 }
+.image-placeholder span {
+  max-width: 82%;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.frame-shell {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #050505 0%, #272727 8%, #050505 18%, #101010 82%, #333 92%, #070707 100%);
+  border: max(4px, 1.2%) solid #070707;
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,.12),
+    inset 0 0 16px rgba(255,255,255,.14),
+    0 12px 32px rgba(0,0,0,.28);
+  overflow: visible;
+}
+.frame-shell.frame-ios {
+  border-radius: 13% / 6%;
+}
+.frame-shell.frame-android {
+  border-radius: 9% / 4.5%;
+}
+.frame-screen {
+  position: absolute;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.1);
+}
+.frame-ios .frame-screen {
+  left: 2.2%;
+  right: 2.2%;
+  top: 1.2%;
+  bottom: 1.2%;
+  border-radius: 11% / 5.1%;
+}
+.frame-android .frame-screen {
+  left: 2.6%;
+  right: 2.6%;
+  top: 1.7%;
+  bottom: 1.7%;
+  border-radius: 7% / 3.5%;
+}
+.frame-screen img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.frame-dynamic-island {
+  position: absolute;
+  left: 35.1%;
+  top: 2.8%;
+  width: 29.8%;
+  height: 4.1%;
+  border-radius: 999px;
+  background: #000;
+  z-index: 3;
+  box-shadow: inset -10px 0 16px rgba(255,255,255,.05);
+  pointer-events: none;
+}
+.frame-dynamic-island::after {
+  content: '';
+  position: absolute;
+  right: 12%;
+  top: 24%;
+  width: 12%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 62% 38%, #202733 0 18%, #07090d 48%, #010101 100%);
+}
+.frame-punch-hole {
+  position: absolute;
+  left: 50%;
+  top: 3.9%;
+  width: 4.5%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #050505;
+  z-index: 3;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), inset 0 0 6px rgba(255,255,255,.08);
+  pointer-events: none;
+}
+.frame-side-button {
+  position: absolute;
+  width: 1.5%;
+  min-width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(#292929, #050505);
+  box-shadow: inset 1px 0 1px rgba(255,255,255,.2);
+  pointer-events: none;
+}
+.frame-side-button.left-one { left: -1.3%; top: 20%; height: 7%; }
+.frame-side-button.left-two { left: -1.3%; top: 31%; height: 9%; }
+.frame-side-button.left-three { left: -1.3%; top: 42%; height: 9%; }
+.frame-side-button.right-one { right: -1.3%; top: 34%; height: 15%; }
+.frame-empty .frame-screen {
+  background: #f7fbff;
+}
 
 /* multi-select box */
 #sel-box {
@@ -577,6 +679,14 @@ select.pi option { background: #2a2a2a; }
     <option value="2048x2732">iPad Pro</option>
   </select>
   <div class="tb-sep"></div>
+  <span class="tb-label">Frames</span>
+  <button class="tb-btn" id="btn-frame-ios" title="Add iOS frame">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="1.5" width="8" height="13" rx="2.3"/><path d="M6.5 3.2h3"/></svg>iOS
+  </button>
+  <button class="tb-btn" id="btn-frame-android" title="Add Android frame">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="1.5" width="8" height="13" rx="1.8"/><circle cx="8" cy="3.6" r=".7" fill="currentColor" stroke="none"/></svg>Android
+  </button>
+  <div class="tb-sep"></div>
   <button class="tb-btn" id="btn-export" title="Export PNG or ZIP">
     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5v8l2.5-2.5 1 1L8 11.5l-3.5-3.5 1-1L8 9.5v-8h1zM2 13.5h12v1.5H2v-1.5z"/></svg>Export
   </button>
@@ -659,6 +769,7 @@ const S = {
 let _elSeq = 0, _cvSeq = 0;
 const uid  = () => 'e' + (++_elSeq);
 const cvid = () => 'c' + (++_cvSeq);
+const IPHONE_16_PRO_SCREEN = { width: 1206, height: 2622 };
 
 const activeCV = () => S.canvases.find(c => c.id === S.activeId) || S.canvases[0];
 const getEl    = id => { const cv = activeCV(); return cv ? cv.elements.find(e => e.id === id) : null; };
@@ -713,6 +824,7 @@ function newEl(type, x, y, w, h) {
     arrow:    { strokeColor: '#333333', strokeWidth: 2, lineStyle: 'solid', arrowHead: 'end' },
     text:     { text: 'Text', fontFamily: 'Inter, sans-serif', fontSize: 32, fontWeight: 'normal', fontStyle: 'normal', underline: false, textColor: '#000000', textAlign: 'left', autoH: true, fillColor: 'transparent', fillAlpha: 0, borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
     image:    { src: '', fitMode: 'fill', borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
+    frame:    { device: 'ios', src: '', fitMode: 'fill' },
   };
   return Object.assign(base, defaults[type] || {});
 }
@@ -749,6 +861,14 @@ function directElementDefaults(type, cv) {
       overrides: { fitMode: 'fit' }
     };
   }
+  if (type === 'frame') {
+    const width = Math.round(Math.min(cv.width * 0.40, 506));
+    return {
+      width,
+      height: Math.round(width * IPHONE_16_PRO_SCREEN.height / IPHONE_16_PRO_SCREEN.width),
+      overrides: { device: 'ios', fitMode: 'fill' }
+    };
+  }
   return null;
 }
 
@@ -758,6 +878,21 @@ function addElementDirect(type) {
   const x = Math.round((cv.width - def.width) / 2);
   const y = Math.round((cv.height - def.height) / 2);
   const el = Object.assign(newEl(type, x, y, def.width, def.height), def.overrides || {});
+  cv.elements.push(el);
+  S.selIds = [el.id];
+  setTool('select');
+  snap();
+  renderAll();
+}
+
+function addFrameDirect(device) {
+  const cv = activeCV(); if (!cv) return;
+  const def = directElementDefaults('frame', cv); if (!def) return;
+  const width = device === 'android' ? Math.round(def.width * 0.94) : def.width;
+  const height = device === 'android' ? Math.round(def.height * 0.97) : def.height;
+  const x = Math.round((cv.width - width) / 2);
+  const y = Math.round((cv.height - height) / 2);
+  const el = Object.assign(newEl('frame', x, y, width, height), def.overrides || {}, { device });
   cv.elements.push(el);
   S.selIds = [el.id];
   setTool('select');
@@ -1248,6 +1383,55 @@ function drawElVisual(div, el) {
       }
       break;
     }
+    case 'frame': {
+      div.style.background = 'transparent';
+      div.style.border = 'none';
+      div.style.borderRadius = '0';
+      div.style.overflow = 'visible';
+      clearSvg(div);
+      div.querySelectorAll(':scope > img, :scope > .image-clip').forEach(node => node.remove());
+      let shell = div.querySelector(':scope > .frame-shell');
+      if (!shell) {
+        shell = document.createElement('div');
+        div.appendChild(shell);
+      }
+      shell.className = 'frame-shell frame-' + (el.device === 'android' ? 'android' : 'ios') + (el.src ? '' : ' frame-empty');
+      shell.innerHTML = '';
+
+      const screen = document.createElement('div');
+      screen.className = 'frame-screen';
+      bindFrameDropTarget(screen, el);
+      shell.appendChild(screen);
+
+      if (el.src) {
+        const img = document.createElement('img');
+        img.src = el.src;
+        img.style.objectFit = el.fitMode === 'fit' ? 'contain' : el.fitMode === 'stretch' ? 'fill' : 'cover';
+        screen.appendChild(img);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'image-placeholder';
+        ph.innerHTML = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="3" width="18" height="26" rx="4"/><path d="M13 7h6"/><path d="M10 22l5-5 4 4 2-2 3 3"/></svg><span>Drop screenshot</span>';
+        screen.appendChild(ph);
+      }
+
+      if (el.device === 'android') {
+        const punch = document.createElement('div');
+        punch.className = 'frame-punch-hole';
+        shell.appendChild(punch);
+      } else {
+        const island = document.createElement('div');
+        island.className = 'frame-dynamic-island';
+        shell.appendChild(island);
+      }
+
+      ['left-one','left-two','left-three','right-one'].forEach(name => {
+        const button = document.createElement('div');
+        button.className = 'frame-side-button ' + name;
+        shell.appendChild(button);
+      });
+      break;
+    }
   }
 }
 
@@ -1404,6 +1588,7 @@ function renderPanel() {
   if (['line','arrow'].includes(el.type)) buildStrokeSection(root, el);
   if (el.type === 'text')  buildTextSection(root, el);
   if (el.type === 'image') buildImageSection(root, el);
+  if (el.type === 'frame') buildFrameSection(root, el);
   buildLayerSection(root, el);
 }
 
@@ -1678,6 +1863,14 @@ function buildTextSection(root, el) {
 }
 
 // ── Image ──
+function fileToDataUrl(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+}
+
 function imageSizeFromSrc(src) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1710,11 +1903,7 @@ function fitImageElementToSource(el, size) {
 }
 
 async function applyImageFileToElement(el, file) {
-  const src = await new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = ev => resolve(ev.target.result);
-    reader.readAsDataURL(file);
-  });
+  const src = await fileToDataUrl(file);
   el.src = src;
   fitImageElementToSource(el, await imageSizeFromSrc(src));
   refreshEl(el);
@@ -1731,10 +1920,70 @@ function chooseImageForElement(el) {
   inp.click();
 }
 
+async function applyFrameFileToElement(el, file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  el.src = await fileToDataUrl(file);
+  refreshEl(el);
+  snap();
+  renderPanel();
+}
+
+function chooseFrameImageForElement(el) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.addEventListener('change', () => {
+    const f = inp.files[0]; if (!f) return;
+    applyFrameFileToElement(el, f);
+  });
+  inp.click();
+}
+
+function bindFrameDropTarget(screen, el) {
+  screen.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  screen.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
+    if (file) applyFrameFileToElement(el, file);
+  });
+}
+
 function buildImageSection(root, el) {
   const { wrap, body } = makeSection('Image');
   const upBtn = btn('📂 Upload', () => chooseImageForElement(el));
   upBtn.style.flex = '1'; body.appendChild(row(lbl('File'), upBtn));
+
+  const fitRow = document.createElement('div'); fitRow.className = 'pr'; fitRow.appendChild(lbl('Fit'));
+  ['fill','fit','stretch'].forEach(m => {
+    const b = btn(m, () => {
+      el.fitMode = m;
+      fitRow.querySelectorAll('.p-btn').forEach(x => x.classList.toggle('on', x.textContent === m));
+      refreshEl(el); snap();
+    }, el.fitMode === m);
+    b.style.flex = '1'; fitRow.appendChild(b);
+  });
+  body.appendChild(fitRow);
+
+  root.appendChild(wrap);
+}
+
+function buildFrameSection(root, el) {
+  const { wrap, body } = makeSection('Frame');
+  const upBtn = btn('Upload', () => chooseFrameImageForElement(el));
+  upBtn.style.flex = '1'; body.appendChild(row(lbl('Shot'), upBtn));
+
+  const deviceRow = document.createElement('div'); deviceRow.className = 'pr'; deviceRow.appendChild(lbl('Device'));
+  [['ios','iOS'], ['android','Android']].forEach(([value, label]) => {
+    const b = btn(label, () => {
+      el.device = value;
+      deviceRow.querySelectorAll('.p-btn').forEach(x => x.classList.toggle('on', x.textContent === label));
+      refreshEl(el); snap();
+    }, el.device === value);
+    b.style.flex = '1'; deviceRow.appendChild(b);
+  });
+  body.appendChild(deviceRow);
 
   const fitRow = document.createElement('div'); fitRow.className = 'pr'; fitRow.appendChild(lbl('Fit'));
   ['fill','fit','stretch'].forEach(m => {
@@ -1941,6 +2190,12 @@ function bindElEvents(div) {
       e.preventDefault();
       e.stopPropagation();
       startTextEditing(inner);
+      return;
+    }
+    if (el.type === 'frame') {
+      e.preventDefault();
+      e.stopPropagation();
+      chooseFrameImageForElement(el);
       return;
     }
     if (el.type !== 'image') return;
@@ -2422,6 +2677,9 @@ function setupToolbar() {
     cv.width = w; cv.height = h; applyCanvasSize(); syncDimInputs(); snap();
   });
 
+  document.getElementById('btn-frame-ios').addEventListener('click', () => addFrameDirect('ios'));
+  document.getElementById('btn-frame-android').addEventListener('click', () => addFrameDirect('android'));
+
   document.getElementById('btn-add-canvas').addEventListener('click', addNewCanvas);
 
   document.querySelectorAll('#tool-rail .tool-btn').forEach(btn => {
@@ -2859,8 +3117,73 @@ function drawElCtx(ctx, el, sc) {
       if(el.src){const img=new Image();img.src=el.src;try{ctx.drawImage(img,0,0,ew,eh);}catch(e){}}
       else{ctx.fillStyle='#ccc';ctx.fillRect(0,0,ew,eh);}
       break;
+    case 'frame':
+      drawFrameCtx(ctx, el, ew, eh);
+      break;
   }
   ctx.restore();
+}
+
+function frameScreenMetrics(device, w, h) {
+  if (device === 'android') {
+    return { x: w * 0.026, y: h * 0.017, w: w * 0.948, h: h * 0.966, r: Math.min(w * 0.07, h * 0.035) };
+  }
+  return { x: w * 0.022, y: h * 0.012, w: w * 0.956, h: h * 0.976, r: Math.min(w * 0.11, h * 0.051) };
+}
+
+function drawFrameCtx(ctx, el, w, h) {
+  const device = el.device === 'android' ? 'android' : 'ios';
+  const border = Math.max(8, Math.min(w, h) * 0.028);
+  const radius = device === 'android' ? Math.min(w * 0.09, h * 0.045) : Math.min(w * 0.13, h * 0.06);
+
+  ctx.fillStyle = '#070707';
+  ctx.beginPath(); ctxRR(ctx, 0, 0, w, h, radius); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.16)';
+  ctx.lineWidth = Math.max(1, border * 0.16);
+  ctx.stroke();
+
+  const screen = frameScreenMetrics(device, w, h);
+  ctx.save();
+  ctx.beginPath(); ctxRR(ctx, screen.x, screen.y, screen.w, screen.h, screen.r); ctx.clip();
+  ctx.fillStyle = el.src ? '#fff' : '#f7fbff';
+  ctx.fillRect(screen.x, screen.y, screen.w, screen.h);
+  if (el.src) {
+    const img = new Image();
+    img.src = el.src;
+    try {
+      drawObjectFitImageCtx(ctx, img, screen.x, screen.y, screen.w, screen.h, el.fitMode || 'fill');
+    } catch (e) {}
+  } else {
+    ctx.strokeStyle = 'rgba(77,157,224,.85)';
+    ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.008);
+    ctx.setLineDash([12, 8]);
+    ctx.strokeRect(screen.x + screen.w * 0.16, screen.y + screen.h * 0.42, screen.w * 0.68, screen.h * 0.16);
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+
+  ctx.fillStyle = '#050505';
+  if (device === 'android') {
+    ctx.beginPath();
+    ctx.arc(w * 0.5, h * 0.039 + w * 0.0225, w * 0.0225, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const iw = w * 0.298, ih = h * 0.041;
+    ctx.beginPath(); ctxRR(ctx, w * 0.351, h * 0.028, iw, ih, ih / 2); ctx.fill();
+  }
+}
+
+function drawObjectFitImageCtx(ctx, img, x, y, w, h, fitMode) {
+  const iw = img.naturalWidth || img.width || w;
+  const ih = img.naturalHeight || img.height || h;
+  if (fitMode === 'stretch') {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+  const scale = fitMode === 'fit' ? Math.min(w / iw, h / ih) : Math.max(w / iw, h / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
 function ctxRR(ctx, x, y, w, h, r) {
