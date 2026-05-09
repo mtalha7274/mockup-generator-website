@@ -2,7 +2,42 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../editor.html', import.meta.url), 'utf8');
+const landingHtml = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+test('landing page links to the separate editor page', () => {
+  assert.match(landingHtml, /href="editor\.html"/);
+  assert.match(landingHtml, />Open editor</);
+  assert.doesNotMatch(landingHtml, />Try for free</);
+  assert.doesNotMatch(landingHtml, />Sign In</);
+});
+
+test('landing page does not initialize the editor app', () => {
+  assert.doesNotMatch(landingHtml, /\binit\(\);/);
+  assert.doesNotMatch(landingHtml, /id="workspace"/);
+  assert.doesNotMatch(landingHtml, /const S = \{/);
+});
+
+test('editor does not register a native beforeunload dialog', () => {
+  assert.doesNotMatch(html, /beforeunload/);
+  assert.doesNotMatch(html, /event\.returnValue\s*=/);
+});
+
+test('editor autosaves and restores projects after browser refresh', () => {
+  assert.match(html, /const AUTOSAVE_STORAGE_KEY\s*=\s*'mockup-generator-autosave'/);
+  assert.match(html, /function saveAutosaveState\(\)/);
+  assert.match(html, /localStorage\.setItem\(AUTOSAVE_STORAGE_KEY,\s*JSON\.stringify\(buildProjectPayload\(\)\)\)/);
+  assert.match(html, /function loadAutosaveState\(\)/);
+  assert.match(html, /localStorage\.getItem\(AUTOSAVE_STORAGE_KEY\)/);
+  assert.match(html, /function applyProjectState\(state\)/);
+  assert.match(html, /const restored = loadAutosaveState\(\);/);
+  assert.match(html, /if \(restored\) \{\s*applyProjectState\(restored\.state\);/s);
+});
+
+test('editor brand is not a link away from the editor', () => {
+  assert.match(html, /<div class="editor-brand"[^>]*>/);
+  assert.doesNotMatch(html, /<a class="editor-brand"[^>]*href=/);
+});
 
 test('top toolbar exposes iOS and Android frame insertion controls', () => {
   assert.match(html, /id="btn-frame-ios"/);
@@ -135,5 +170,5 @@ test('project import restores state and refreshes history, IDs, and canvas rende
   assert.match(html, /S\.selIds\s*=\s*state\.selIds/);
   assert.match(html, /S\.history\s*=\s*\[\]/);
   assert.match(html, /S\.zoom\s*=\s*state\.zoom/);
-  assert.match(html, /snap\(\);\s*renderAll\(\);\s*syncZoomInput\(\);\s*requestAnimationFrame\(\(\) => restoreWorkspaceScroll\(state\.workspaceScroll\)\)/);
+  assert.match(html, /applyProjectState\(state\);\s*renderAll\(\);\s*syncZoomInput\(\);\s*requestAnimationFrame\(\(\) => restoreWorkspaceScroll\(state\.workspaceScroll\)\)/);
 });

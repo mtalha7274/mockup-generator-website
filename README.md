@@ -1,16 +1,18 @@
 # Mockup Generator Code Guide
 
-This project is a single-page vanilla HTML/CSS/JS mockup editor. There is no build step: open `index.html` in a browser and the app runs directly.
+This project is a static vanilla HTML/CSS/JS mockup generator website. There is no build step: open `index.html` for the public landing page, then use `editor.html` for the mockup editor.
 
 ## Main Files
 
-- `index.html` contains the UI markup, styles, state, rendering logic, interactions, property panel, project import/export, keyboard shortcuts, and mockup export code.
-- `tests/frame-feature.test.mjs` is a lightweight Node test that checks the device-frame, project-file, toolbar, and export wiring.
+- `index.html` contains the marketing landing page for the free App Store and Play Store mockup generator. It should stay static and must not initialize the editor app.
+- `editor.html` contains the editor UI markup, styles, state, rendering logic, interactions, property panel, project import/export, keyboard shortcuts, and mockup export code.
+- `tests/frame-feature.test.mjs` is a lightweight Node test that checks the landing/editor split plus the editor's device-frame, project-file, toolbar, and export wiring.
 - Keep changes small and local. Most behavior is organized with large comment banners in the script.
 
 ## Where To Change Things
 
-- **App state and data models:** `S`, `newCanvas()`, `newEl()`, `directElementDefaults()`, and `nextZ()` define canvases, elements, selection, zoom, history, and defaults.
+- **Landing page:** keep homepage edits in `index.html`; primary calls to action should link to `editor.html`.
+- **App state and data models:** in `editor.html`, `S`, `newCanvas()`, `newEl()`, `directElementDefaults()`, and `nextZ()` define canvases, elements, selection, zoom, history, and defaults.
 - **Canvas rendering:** `renderAllCanvases()` orchestrates the visible mockups. The smaller helpers `createCanvasShell()`, `createCanvasChrome()`, `createCanvasDeleteButton()`, `createCanvasDuplicateButton()`, and `appendCanvasInteractionLayers()` act like UI components.
 - **Element rendering:** `renderElements()`, `renderElementsForCanvas()`, `renderElInContainer()`, and `drawElVisual()` draw shapes, text, images, selection outlines, and handles.
 - **Device frames:** Frame visuals are code-drawn in the `.frame-*` CSS rules and the `frame` branch of `drawElVisual()`. `directElementDefaults()`, `addFrameDirect()`, `buildFrameSection()`, `applyFrameFileToElement()`, and `bindFrameDropTarget()` handle sizing, insertion, properties, uploads, and screenshot drag/drop.
@@ -43,7 +45,7 @@ This project is a single-page vanilla HTML/CSS/JS mockup editor. There is no bui
 
 ## Tests
 
-- Run the frame feature checks with:
+- Run the landing/editor and frame feature checks with:
 
 ```bash
 node --test tests/frame-feature.test.mjs
@@ -57,7 +59,8 @@ git diff --check
 
 ## Notes For Future AI Edits
 
-- Preserve `S.activeId` and `S.selIds` when changing canvas or selection behavior.
+- Preserve `S.activeId` and `S.selIds` when changing canvas or selection behavior in `editor.html`.
+- Keep editor behavior tests pointed at `editor.html`; `index.html` is the landing page and should not contain editor initialization such as `init();`.
 - If changing zoom or multi-canvas layout, check both `createCanvasShell()` and `fitCanvas()`.
 - If changing top canvas buttons, update `createCanvasChrome()` and the related CSS near `CANVAS TOP CHROME`.
 - If changing device-frame geometry, update the frame tests and visually verify the notch/punch-hole alignment with a real screenshot.
