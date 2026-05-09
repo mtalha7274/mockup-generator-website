@@ -76,3 +76,52 @@ test('export shows progress without flashing the capture surface onscreen', () =
   assert.match(html, /container\.style\.left\s*=\s*'-100000px'/);
   assert.match(html, /container\.style\.zIndex\s*=\s*'-1'/);
 });
+
+test('project files can be imported from the toolbar', () => {
+  assert.match(html, /id="btn-project-import"/);
+  assert.match(html, /id="project-import-input"/);
+  assert.match(html, /accept="\.mockup,application\/json"/);
+  assert.match(html, /addEventListener\('click', \(\) => projectImportInput\.click\(\)\)/);
+});
+
+test('top toolbar keeps canvas sizing and presets out of the main bar', () => {
+  assert.doesNotMatch(html, /id="cv-w"/);
+  assert.doesNotMatch(html, /id="cv-h"/);
+  assert.doesNotMatch(html, /id="preset-sel"/);
+  assert.doesNotMatch(html, />Presets/);
+});
+
+test('export button opens a menu for project or mockup exports', () => {
+  assert.doesNotMatch(html, /id="btn-project-export"/);
+  assert.match(html, /id="btn-project-import"/s);
+  assert.match(html, /id="btn-project-import"[\s\S]*id="btn-export"/);
+  assert.match(html, /id="export-menu"/);
+  assert.match(html, /id="export-project-option"/);
+  assert.match(html, /id="export-mockups-option"/);
+  assert.match(html, /toggleExportMenu/);
+  assert.match(html, /export-project-option'\)\.addEventListener\('click', \(\) => runExportMenuAction\(exportProject\)\)/);
+  assert.match(html, /export-mockups-option'\)\.addEventListener\('click', \(\) => runExportMenuAction\(exportPNG\)\)/);
+});
+
+test('project export writes a versioned mockup state file', () => {
+  assert.match(html, /const PROJECT_FILE_VERSION\s*=\s*1/);
+  assert.match(html, /function buildProjectPayload\(\)/);
+  assert.match(html, /app:\s*'mockup-generator'/);
+  assert.match(html, /version:\s*PROJECT_FILE_VERSION/);
+  assert.match(html, /state:\s*\{\s*canvases:\s*S\.canvases,\s*activeId:\s*S\.activeId,\s*mockupGap:\s*S\.mockupGap,\s*zoom:\s*S\.zoom,\s*selIds:\s*S\.selIds,\s*workspaceScroll:\s*workspaceScrollState\(\)\s*\}/s);
+  assert.match(html, /downloadBlob\(blob,\s*projectFileName\(\)\)/);
+  assert.match(html, /\.mockup'/);
+});
+
+test('project import restores state and refreshes history, IDs, and canvas rendering', () => {
+  assert.match(html, /async function importProjectFile\(file\)/);
+  assert.match(html, /function readProjectFile\(file\)/);
+  assert.match(html, /function normalizeProjectState\(payload\)/);
+  assert.match(html, /function rebuildIdSequences\(\)/);
+  assert.match(html, /S\.canvases\s*=\s*state\.canvases/);
+  assert.match(html, /S\.activeId\s*=\s*state\.activeId/);
+  assert.match(html, /S\.selIds\s*=\s*state\.selIds/);
+  assert.match(html, /S\.history\s*=\s*\[\]/);
+  assert.match(html, /S\.zoom\s*=\s*state\.zoom/);
+  assert.match(html, /snap\(\);\s*renderAll\(\);\s*syncZoomInput\(\);\s*requestAnimationFrame\(\(\) => restoreWorkspaceScroll\(state\.workspaceScroll\)\)/);
+});
