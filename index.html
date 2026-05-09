@@ -409,12 +409,9 @@ body {
 .frame-shell {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #050505 0%, #272727 8%, #050505 18%, #101010 82%, #333 92%, #070707 100%);
+  background: #070707;
   border: max(4px, 1.2%) solid #070707;
-  box-shadow:
-    inset 0 0 0 2px rgba(255,255,255,.12),
-    inset 0 0 16px rgba(255,255,255,.14),
-    0 12px 32px rgba(0,0,0,.28);
+  box-shadow: none;
   overflow: visible;
 }
 .frame-shell.frame-ios {
@@ -491,8 +488,8 @@ body {
   width: 1.5%;
   min-width: 3px;
   border-radius: 999px;
-  background: linear-gradient(#292929, #050505);
-  box-shadow: inset 1px 0 1px rgba(255,255,255,.2);
+  background: #070707;
+  box-shadow: none;
   pointer-events: none;
 }
 .frame-side-button.left-one { left: -1.3%; top: 20%; height: 7%; }
@@ -862,6 +859,7 @@ let _elSeq = 0, _cvSeq = 0;
 const uid  = () => 'e' + (++_elSeq);
 const cvid = () => 'c' + (++_cvSeq);
 const IPHONE_16_PRO_SCREEN = { width: 1206, height: 2622 };
+const FRAME_COLOR = '#070707';
 
 const activeCV = () => S.canvases.find(c => c.id === S.activeId) || S.canvases[0];
 const getEl    = id => { const cv = activeCV(); return cv ? cv.elements.find(e => e.id === id) : null; };
@@ -917,7 +915,7 @@ function newEl(type, x, y, w, h) {
     arrow:    { strokeColor: '#333333', strokeWidth: 2, lineStyle: 'solid', arrowHead: 'end' },
     text:     { text: 'Text', fontFamily: 'Inter, sans-serif', fontSize: 32, fontWeight: 'normal', fontStyle: 'normal', underline: false, textColor: '#000000', textAlign: 'left', autoH: true, fillColor: 'transparent', fillAlpha: 0, borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
     image:    { src: '', fitMode: 'fill', borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
-    frame:    { device: 'ios', src: '', fitMode: 'fill' },
+    frame:    { device: 'ios', src: '', fitMode: 'stretch' },
   };
   return Object.assign(base, defaults[type] || {});
 }
@@ -955,11 +953,12 @@ function directElementDefaults(type, cv) {
     };
   }
   if (type === 'frame') {
-    const width = Math.round(Math.min(cv.width * 0.40, 506));
+    const frameAspect = IPHONE_16_PRO_SCREEN.height / IPHONE_16_PRO_SCREEN.width;
+    const width = Math.round(Math.min(cv.width * 0.76, 1040 / Math.max(S.zoom, 0.04), cv.height * 0.98 / frameAspect));
     return {
       width,
-      height: Math.round(width * IPHONE_16_PRO_SCREEN.height / IPHONE_16_PRO_SCREEN.width),
-      overrides: { device: 'ios', fitMode: 'fill' }
+      height: Math.round(width * frameAspect),
+      overrides: { device: 'ios', fitMode: 'stretch' }
     };
   }
   return null;
@@ -3431,9 +3430,9 @@ function drawFrameCtx(ctx, el, w, h) {
   const border = Math.max(8, Math.min(w, h) * 0.028);
   const radius = device === 'android' ? Math.min(w * 0.09, h * 0.045) : Math.min(w * 0.13, h * 0.06);
 
-  ctx.fillStyle = '#070707';
+  ctx.fillStyle = FRAME_COLOR;
   ctx.beginPath(); ctxRR(ctx, 0, 0, w, h, radius); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.16)';
+  ctx.strokeStyle = FRAME_COLOR;
   ctx.lineWidth = Math.max(1, border * 0.16);
   ctx.stroke();
 

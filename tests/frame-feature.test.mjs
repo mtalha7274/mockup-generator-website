@@ -14,7 +14,8 @@ test('top toolbar exposes iOS and Android frame insertion controls', () => {
 test('frame elements have device, screenshot, and fit defaults', () => {
   assert.match(html, /frame:\s*\{[^}]*device:\s*'ios'/s);
   assert.match(html, /frame:\s*\{[^}]*src:\s*''/s);
-  assert.match(html, /frame:\s*\{[^}]*fitMode:\s*'fill'/s);
+  assert.match(html, /frame:\s*\{[^}]*fitMode:\s*'stretch'/s);
+  assert.match(html, /overrides:\s*\{ device:\s*'ios',\s*fitMode:\s*'stretch'\s*\}/);
 });
 
 test('frames render a shell, screen drop target, and device overlays', () => {
@@ -26,12 +27,21 @@ test('frames render a shell, screen drop target, and device overlays', () => {
 });
 
 test('iOS frame uses iPhone 16 Pro screenshot ratio with thin even bezels', () => {
-  assert.match(html, /const width = Math\.round\(Math\.min\(cv\.width \* 0\.40, 506\)\)/);
+  assert.match(html, /const frameAspect = IPHONE_16_PRO_SCREEN\.height \/ IPHONE_16_PRO_SCREEN\.width/);
+  assert.match(html, /const width = Math\.round\(Math\.min\(cv\.width \* 0\.76,\s*1040 \/ Math\.max\(S\.zoom,\s*0\.04\),\s*cv\.height \* 0\.98 \/ frameAspect\)\)/);
   assert.match(html, /width,/);
-  assert.match(html, /height:\s*Math\.round\(width \* IPHONE_16_PRO_SCREEN\.height \/ IPHONE_16_PRO_SCREEN\.width\)/);
+  assert.match(html, /height:\s*Math\.round\(width \* frameAspect\)/);
   assert.match(html, /\.frame-shell\s*\{[^}]*border:\s*max\(4px, 1\.2%\) solid #070707;/s);
   assert.match(html, /\.frame-ios \.frame-screen\s*\{[^}]*left:\s*2\.2%;[^}]*right:\s*2\.2%;[^}]*top:\s*1\.2%;[^}]*bottom:\s*1\.2%;/s);
   assert.match(html, /return \{ x: w \* 0\.022, y: h \* 0\.012, w: w \* 0\.956, h: h \* 0\.976/);
+});
+
+test('device frames use one flat body color without shiny corner gradients', () => {
+  assert.match(html, /\.frame-shell\s*\{[^}]*background:\s*#070707;[^}]*border:\s*max\(4px, 1\.2%\) solid #070707;[^}]*box-shadow:\s*none;/s);
+  assert.doesNotMatch(html, /\.frame-shell\s*\{[^}]*linear-gradient/s);
+  assert.match(html, /\.frame-side-button\s*\{[^}]*background:\s*#070707;[^}]*box-shadow:\s*none;/s);
+  assert.match(html, /ctx\.fillStyle = FRAME_COLOR/);
+  assert.doesNotMatch(html, /ctx\.strokeStyle = 'rgba\(255,255,255,\s*\.16\)'/);
 });
 
 test('iOS Dynamic Island aligns to the simulator screenshot safe area', () => {
