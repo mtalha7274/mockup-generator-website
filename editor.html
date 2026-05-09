@@ -659,6 +659,47 @@ body.resizing-panel #panel-resizer::after {
   background: var(--accent);
   cursor: pointer;
 }
+.radius-slider-input {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+.radius-slider-input .pi {
+  flex: 0 0 52px;
+  max-width: 52px;
+}
+.radius-icon-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  flex: 0 0 26px;
+  border-radius: 4px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-input);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.radius-icon-btn:hover,
+.radius-icon-btn.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.radius-icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.radius-corners {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+}
 .p-btn {
   height: 26px;
   padding: 0 8px;
@@ -778,7 +819,7 @@ select.pi option { background: #2a2a2a; }
   <div class="tb-sep"></div>
   <span class="tb-label">Zoom</span>
   <button class="tb-btn" id="btn-zoom-out" title="Zoom out">−</button>
-  <input class="tb-input" id="zoom-val" value="100%" title="Zoom %">
+  <input class="tb-input" id="zoom-val" value="20%" title="Zoom %">
   <button class="tb-btn" id="btn-zoom-in" title="Zoom in">+</button>
   <button class="tb-btn" id="btn-fit" title="Fit to view">Fit</button>
   <div class="tb-sep"></div>
@@ -881,13 +922,71 @@ select.pi option { background: #2a2a2a; }
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
+const DEFAULT_ZOOM = 0.2;
+const ZOOM_STEP = 0.04;
+const EDITOR_UNIT_SCALE = DEFAULT_ZOOM;
+const FONT_WEIGHT_OPTIONS = [
+  ['100', 'Ultra Thin'],
+  ['200', 'Thin'],
+  ['300', 'Light'],
+  ['400', 'Regular'],
+  ['500', 'Medium'],
+  ['600', 'Semibold'],
+  ['700', 'Bold'],
+  ['800', 'Extra Bold'],
+  ['900', 'Black'],
+];
+const BORDER_RADIUS_KEYS = [
+  ['borderRadiusTopLeft', 'TL'],
+  ['borderRadiusTopRight', 'TR'],
+  ['borderRadiusBottomRight', 'BR'],
+  ['borderRadiusBottomLeft', 'BL'],
+];
+const OPEN_RADIUS_CORNER_PANELS = new Set();
+
+function canvasToEditorUnit(value) {
+  return Math.round((Number(value) || 0) * EDITOR_UNIT_SCALE * 100) / 100;
+}
+
+function editorToCanvasUnit(value) {
+  return Math.round((Number(value) || 0) / EDITOR_UNIT_SCALE * 100) / 100;
+}
+
+function normalizeFontWeight(weight) {
+  if (weight === 'normal') return '400';
+  if (weight === 'bold') return '700';
+  const value = String(weight || '400');
+  return FONT_WEIGHT_OPTIONS.some(([w]) => w === value) ? value : '400';
+}
+
+function getBorderRadius(el, key) {
+  const fallback = Number(el.borderRadius) || 0;
+  return Math.max(0, Number(el[key] ?? fallback) || 0);
+}
+
+function setAllBorderRadii(el, value) {
+  const radius = Math.max(0, value);
+  el.borderRadius = radius;
+  BORDER_RADIUS_KEYS.forEach(([key]) => { el[key] = radius; });
+}
+
+function setBorderRadiusCorner(el, key, value) {
+  el[key] = Math.max(0, value);
+  const radii = BORDER_RADIUS_KEYS.map(([cornerKey]) => getBorderRadius(el, cornerKey));
+  if (radii.every(radius => radius === radii[0])) el.borderRadius = radii[0];
+}
+
+function borderRadiusCss(el) {
+  return BORDER_RADIUS_KEYS.map(([key]) => getBorderRadius(el, key) + 'px').join(' ');
+}
+
 const S = {
   canvases: [],
   activeId: null,
   selIds: [],
   clipboard: [],
   tool: 'select',
-  zoom: 1,
+  zoom: DEFAULT_ZOOM,
   mockupGap: 8,
   history: [],
   hIdx: -1,
@@ -953,7 +1052,7 @@ function newEl(type, x, y, w, h) {
     triangle: { fillColor: '#4d9de0', fillAlpha: 1, borderColor: '#000000', borderWidth: 0 },
     line:     { strokeColor: '#333333', strokeWidth: 2, lineStyle: 'solid' },
     arrow:    { strokeColor: '#333333', strokeWidth: 2, lineStyle: 'solid', arrowHead: 'end' },
-    text:     { text: 'Text', fontFamily: 'Inter, sans-serif', fontSize: 32, fontWeight: 'normal', fontStyle: 'normal', underline: false, textColor: '#000000', textAlign: 'left', autoH: true, fillColor: 'transparent', fillAlpha: 0, borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
+    text:     { text: 'Text', fontFamily: 'Inter, sans-serif', fontSize: 32, fontWeight: '400', fontStyle: 'normal', underline: false, textColor: '#000000', textAlign: 'left', autoH: true, fillColor: 'transparent', fillAlpha: 0, borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
     image:    { src: '', fitMode: 'fill', borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
     frame:    { device: 'ios', src: '', fitMode: 'stretch' },
   };
@@ -980,7 +1079,7 @@ function directElementDefaults(type, cv) {
       overrides: {
         text: 'Title',
         fontSize,
-        fontWeight: 'bold',
+        fontWeight: '700',
         textAlign: 'center',
       }
     };
@@ -1047,7 +1146,6 @@ function init() {
     S.canvases.push(cv); S.activeId = cv.id;
     snap();
     renderAll();
-    requestAnimationFrame(fitCanvas);
   }
   setupWorkspace();
   setupKeyboard();
@@ -1193,8 +1291,13 @@ function applyMockupGap() {
 // ═══════════════════════════════════════════════════════════
 const WS_PAD = 80;
 
+function snapZoomToStep(z) {
+  return Math.round(z / ZOOM_STEP) * ZOOM_STEP;
+}
+
 function applyZoom(z, doScroll) {
-  z = Math.max(0.04, Math.min(5, z));
+  z = snapZoomToStep(z);
+  z = Math.round(Math.max(0.04, Math.min(5, z)) * 10000) / 10000;
   S.zoom = z;
   document.getElementById('zoom-val').value = Math.round(z * 100) + '%';
   renderAllCanvases();
@@ -1204,6 +1307,14 @@ function applyZoom(z, doScroll) {
     ws.scrollLeft = Math.max(0, (scaler.offsetWidth - ws.clientWidth)  / 2);
     ws.scrollTop  = Math.max(0, (scaler.offsetHeight - ws.clientHeight) / 2);
   }
+}
+
+function zoomIn(doScroll = false) {
+  applyZoom(S.zoom + ZOOM_STEP, doScroll);
+}
+
+function zoomOut(doScroll = false) {
+  applyZoom(S.zoom - ZOOM_STEP, doScroll);
 }
 
 function fitCanvas() {
@@ -1414,7 +1525,7 @@ function drawElVisual(div, el) {
     case 'rect':
       div.style.background    = rgba(el.fillColor, el.fillAlpha);
       div.style.border        = el.borderWidth > 0 ? `${el.borderWidth}px solid ${el.borderColor}` : 'none';
-      div.style.borderRadius  = (el.borderRadius || 0) + 'px';
+      div.style.borderRadius  = borderRadiusCss(el);
       clearSvg(div); clearImg(div);
       break;
     case 'circle':
@@ -1480,7 +1591,7 @@ function drawElVisual(div, el) {
     case 'text': {
       div.style.background   = el.fillAlpha > 0 ? rgba(el.fillColor, el.fillAlpha) : 'transparent';
       div.style.border       = el.borderWidth > 0 ? `${el.borderWidth}px solid ${el.borderColor}` : 'none';
-      div.style.borderRadius = (el.borderRadius || 0) + 'px';
+      div.style.borderRadius = borderRadiusCss(el);
       clearSvg(div); clearImg(div);
       let inner = div.querySelector('.text-inner');
       if (!inner) {
@@ -1490,7 +1601,7 @@ function drawElVisual(div, el) {
         inner.addEventListener('input', () => {
           const e2 = getEl(div.dataset.id); if (!e2) return;
           e2.text = inner.innerText;
-          if (e2.autoH) { e2.height = inner.scrollHeight + 8; div.style.height = e2.height + 'px'; }
+          growTextElementToFit(e2, div, inner);
           snap();
         });
         inner.addEventListener('pointerdown', ev => {
@@ -1512,7 +1623,8 @@ function drawElVisual(div, el) {
       }
       inner.style.fontFamily    = el.fontFamily || 'sans-serif';
       inner.style.fontSize      = el.fontSize + 'px';
-      inner.style.fontWeight    = el.fontWeight || 'normal';
+      el.fontWeight = normalizeFontWeight(el.fontWeight);
+      inner.style.fontWeight    = el.fontWeight;
       inner.style.fontStyle     = el.fontStyle  || 'normal';
       inner.style.textDecoration = el.underline  ? 'underline' : 'none';
       inner.style.color         = el.textColor  || '#000';
@@ -1525,7 +1637,7 @@ function drawElVisual(div, el) {
     case 'image': {
       div.style.background   = 'transparent';
       div.style.border       = el.borderWidth > 0 ? `${el.borderWidth}px solid ${el.borderColor}` : 'none';
-      div.style.borderRadius = (el.borderRadius || 0) + 'px';
+      div.style.borderRadius = borderRadiusCss(el);
       div.style.overflow     = 'visible';
       clearSvg(div);
       div.querySelectorAll(':scope > img').forEach(i => i.remove());
@@ -1622,6 +1734,15 @@ function startTextEditing(inner) {
   inner.contentEditable = 'true';
   inner.focus();
   selectAllText(inner);
+}
+function growTextElementToFit(el, div, inner) {
+  if (!el.autoH) return;
+  if (inner.scrollHeight > div.clientHeight) {
+    el.height = Math.ceil(inner.scrollHeight);
+    div.style.height = el.height + 'px';
+    syncHandles(div, el);
+    renderSelBox();
+  }
 }
 function clearSvg(div) { div.querySelectorAll(':scope > svg').forEach(s => s.remove()); }
 function clearImg(div) {
@@ -1801,9 +1922,44 @@ function slider(val, min, max, onChange) {
   s.addEventListener('input', () => onChange(parseFloat(s.value)));
   return s;
 }
+function radiusSliderInput(value, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'radius-slider-input';
+  const max = Math.max(120, Math.ceil(value || 0));
+  const range = slider(value, 0, max, v => setValue(v));
+  range.step = 1;
+  const field = numInput(value, v => setValue(v), { min: 0, step: 1 });
+
+  function setValue(raw) {
+    const next = Math.max(0, Number(raw) || 0);
+    if (next > Number(range.max)) range.max = Math.ceil(next);
+    range.value = next;
+    field.value = Math.round(next * 100) / 100;
+    onChange(next);
+  }
+
+  wrap.appendChild(range);
+  wrap.appendChild(field);
+  return wrap;
+}
 function btn(text, onClick, active) {
   const b = document.createElement('button'); b.className = 'p-btn' + (active ? ' on' : '');
   b.textContent = text; b.addEventListener('click', onClick); return b;
+}
+function radiusCornerToggleButton(el) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'radius-icon-btn';
+  b.classList.toggle('on', OPEN_RADIUS_CORNER_PANELS.has(el.id));
+  b.title = 'Show separate corner radius controls';
+  b.setAttribute('aria-label', 'Show separate corner radius controls');
+  b.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2.5 5.5v-3h3"/><path d="M10.5 2.5h3v3"/><path d="M13.5 10.5v3h-3"/><path d="M5.5 13.5h-3v-3"/><circle cx="8" cy="8" r="2.2"/></svg>';
+  b.addEventListener('click', () => {
+    if (OPEN_RADIUS_CORNER_PANELS.has(el.id)) OPEN_RADIUS_CORNER_PANELS.delete(el.id);
+    else OPEN_RADIUS_CORNER_PANELS.add(el.id);
+    renderPanel();
+  });
+  return b;
 }
 function colorWidget(hex, alpha, onColor, onAlpha) {
   const wrap = document.createElement('div'); wrap.className = 'color-row';
@@ -1925,10 +2081,25 @@ function buildBorderSection(root, el) {
   const bwInp = numInput(el.borderWidth || 0, v => { el.borderWidth = Math.max(0, v); refreshEl(el); snap(); }, { min: 0 });
   bwInp.style.flex = '1';
   body.appendChild(row(lbl('Width'), bwInp));
-  if (el.type !== 'circle') {
-    const brInp = numInput(el.borderRadius || 0, v => { el.borderRadius = Math.max(0, v); refreshEl(el); snap(); }, { min: 0 });
-    brInp.style.flex = '1';
-    body.appendChild(row(lbl('Radius'), brInp));
+  if (['rect','text','image'].includes(el.type)) {
+    body.appendChild(row(radiusCornerToggleButton(el), lbl('Corner radius')));
+    body.appendChild(row(radiusSliderInput(canvasToEditorUnit(getBorderRadius(el, 'borderRadiusTopLeft')), v => {
+      setAllBorderRadii(el, editorToCanvasUnit(Math.max(0, v)));
+      refreshEl(el); snap();
+    })));
+
+    if (OPEN_RADIUS_CORNER_PANELS.has(el.id)) {
+      const cornerWrap = document.createElement('div');
+      cornerWrap.className = 'radius-corners';
+      body.appendChild(row(lbl('Corners')));
+      BORDER_RADIUS_KEYS.forEach(([key, label]) => {
+        cornerWrap.appendChild(row(lbl(label), radiusSliderInput(canvasToEditorUnit(getBorderRadius(el, key)), v => {
+          setBorderRadiusCorner(el, key, editorToCanvasUnit(Math.max(0, v)));
+          refreshEl(el); snap();
+        })));
+      });
+      body.appendChild(cornerWrap);
+    }
   }
   root.appendChild(wrap);
 }
@@ -1986,7 +2157,7 @@ function buildTextSection(root, el) {
   fSel.addEventListener('change', () => { el.fontFamily = fSel.value; refreshEl(el); snap(); });
   body.appendChild(row(lbl('Font'), fSel));
 
-  const fsInp = numInput(el.fontSize, v => { el.fontSize = Math.max(1, v); refreshEl(el); snap(); }, { min: 1 });
+  const fsInp = numInput(canvasToEditorUnit(el.fontSize), v => { el.fontSize = editorToCanvasUnit(Math.max(1, v)); refreshEl(el); snap(); }, { min: 1 });
   fsInp.style.flex = '1';
   body.appendChild(row(lbl('Size'), fsInp));
 
@@ -1994,17 +2165,22 @@ function buildTextSection(root, el) {
     colorWidget(el.textColor || '#000000', 1, v => { el.textColor = v; refreshEl(el); snap(); })
   ));
 
-  // Weight / style / underline
-  const wsRow = document.createElement('div'); wsRow.className = 'pr'; wsRow.appendChild(lbl('Style'));
-  const weights = [['normal','N'],['500','M'],['600','SB'],['bold','B']];
-  weights.forEach(([w, label]) => {
-    const b = btn(label, () => {
-      el.fontWeight = w;
-      wsRow.querySelectorAll('.p-btn:not(.ital):not(.uln)').forEach(x => x.classList.remove('on'));
-      b.classList.add('on'); refreshEl(el); snap();
-    }, el.fontWeight === w);
-    b.style.fontWeight = w; wsRow.appendChild(b);
+  el.fontWeight = normalizeFontWeight(el.fontWeight);
+  const weightRow = document.createElement('div'); weightRow.className = 'pr'; weightRow.appendChild(lbl('Weight'));
+  const weightSel = document.createElement('select'); weightSel.className = 'pi pi-full'; weightSel.style.flex = '1';
+  FONT_WEIGHT_OPTIONS.forEach(([w, label]) => {
+    const opt = document.createElement('option');
+    opt.value = w;
+    opt.textContent = `${w} ${label}`;
+    if (el.fontWeight === w) opt.selected = true;
+    weightSel.appendChild(opt);
   });
+  weightSel.addEventListener('change', () => { el.fontWeight = weightSel.value; refreshEl(el); snap(); });
+  weightRow.appendChild(weightSel);
+  body.appendChild(weightRow);
+
+  // Style / underline
+  const wsRow = document.createElement('div'); wsRow.className = 'pr'; wsRow.appendChild(lbl('Style'));
   const italBtn = btn('I', () => {
     el.fontStyle = el.fontStyle === 'italic' ? 'normal' : 'italic';
     italBtn.classList.toggle('on', el.fontStyle === 'italic'); refreshEl(el); snap();
@@ -2311,7 +2487,7 @@ function setupWorkspace() {
   ws.addEventListener('wheel', e => {
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
-    applyZoom(S.zoom + (e.deltaY < 0 ? 0.08 : -0.08), false);
+    e.deltaY < 0 ? zoomIn(false) : zoomOut(false);
   }, { passive: false });
 
   document.addEventListener('pointermove', onPtrMove);
@@ -2810,8 +2986,8 @@ function cvCoords(e) {
 function setupToolbar() {
   document.getElementById('btn-undo').addEventListener('click', undo);
   document.getElementById('btn-redo').addEventListener('click', redo);
-  document.getElementById('btn-zoom-in').addEventListener('click',  () => applyZoom(S.zoom + 0.1));
-  document.getElementById('btn-zoom-out').addEventListener('click', () => applyZoom(S.zoom - 0.1));
+  document.getElementById('btn-zoom-in').addEventListener('click', () => zoomIn());
+  document.getElementById('btn-zoom-out').addEventListener('click', () => zoomOut());
   document.getElementById('btn-fit').addEventListener('click', fitCanvas);
   document.getElementById('btn-export').addEventListener('click', toggleExportMenu);
   document.getElementById('export-project-option').addEventListener('click', () => runExportMenuAction(exportProject));
@@ -3166,7 +3342,7 @@ function normalizeProjectState(payload) {
     canvases,
     activeId,
     mockupGap: Math.max(0, Math.min(600, Number(state.mockupGap) || 8)),
-    zoom: Math.max(0.04, Math.min(5, Number(state.zoom) || 1)),
+    zoom: Math.max(0.04, Math.min(5, snapZoomToStep(Number(state.zoom) || DEFAULT_ZOOM))),
     selIds: Array.isArray(state.selIds) ? state.selIds.filter(id => elementIds.has(id)) : [],
     workspaceScroll: state.workspaceScroll || { left: 0, top: 0 }
   };
@@ -3453,7 +3629,7 @@ function drawElCtx(ctx, el, sc) {
   switch(el.type) {
     case 'rect':
       ctx.fillStyle = rgba(el.fillColor,el.fillAlpha);
-      ctx.beginPath(); ctxRR(ctx,0,0,ew,eh,(el.borderRadius||0)*sc); ctx.fill();
+      ctx.beginPath(); ctxRoundedRectForElement(ctx, 0, 0, ew, eh, el, sc); ctx.fill();
       if(el.borderWidth>0){ctx.strokeStyle=el.borderColor;ctx.lineWidth=el.borderWidth*sc;ctx.stroke();}
       break;
     case 'circle':
@@ -3473,15 +3649,19 @@ function drawElCtx(ctx, el, sc) {
       ctx.beginPath();ctx.moveTo(0,eh/2);ctx.lineTo(ew,eh/2);ctx.stroke();ctx.setLineDash([]);
       break;
     case 'text':
-      if(el.fillAlpha>0){ctx.fillStyle=rgba(el.fillColor,el.fillAlpha);ctx.fillRect(0,0,ew,eh);}
+      if(el.fillAlpha>0){ctx.fillStyle=rgba(el.fillColor,el.fillAlpha);ctx.beginPath();ctxRoundedRectForElement(ctx, 0, 0, ew, eh, el, sc);ctx.fill();}
+      if(el.borderWidth>0){ctx.strokeStyle=el.borderColor;ctx.lineWidth=el.borderWidth*sc;ctx.beginPath();ctxRoundedRectForElement(ctx, 0, 0, ew, eh, el, sc);ctx.stroke();}
       ctx.fillStyle=el.textColor||'#000';
-      ctx.font=`${el.fontStyle||''} ${el.fontWeight||'normal'} ${(el.fontSize||16)*sc}px ${el.fontFamily||'sans-serif'}`;
+      ctx.font=`${el.fontStyle||''} ${normalizeFontWeight(el.fontWeight)} ${(el.fontSize||16)*sc}px ${el.fontFamily||'sans-serif'}`;
       ctx.textBaseline='top';
       (el.text||'').split('\n').forEach((line,i)=>ctx.fillText(line,4*sc,(4+i*(el.fontSize||16)*1.3)*sc));
       break;
     case 'image':
+      ctx.save();ctx.beginPath();ctxRoundedRectForElement(ctx, 0, 0, ew, eh, el, sc);ctx.clip();
       if(el.src){const img=new Image();img.src=el.src;try{ctx.drawImage(img,0,0,ew,eh);}catch(e){}}
       else{ctx.fillStyle='#ccc';ctx.fillRect(0,0,ew,eh);}
+      ctx.restore();
+      if(el.borderWidth>0){ctx.strokeStyle=el.borderColor;ctx.lineWidth=el.borderWidth*sc;ctx.beginPath();ctxRoundedRectForElement(ctx, 0, 0, ew, eh, el, sc);ctx.stroke();}
       break;
     case 'frame':
       drawFrameCtx(ctx, el, ew, eh);
@@ -3558,6 +3738,24 @@ function ctxRR(ctx, x, y, w, h, r) {
   ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
   ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
   ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+function ctxRoundedRectForElement(ctx, x, y, w, h, el, sc) {
+  const limit = Math.min(w / 2, h / 2);
+  const tl = Math.min(getBorderRadius(el, 'borderRadiusTopLeft') * sc, limit);
+  const tr = Math.min(getBorderRadius(el, 'borderRadiusTopRight') * sc, limit);
+  const br = Math.min(getBorderRadius(el, 'borderRadiusBottomRight') * sc, limit);
+  const bl = Math.min(getBorderRadius(el, 'borderRadiusBottomLeft') * sc, limit);
+  ctx.moveTo(x + tl, y);
+  ctx.lineTo(x + w - tr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
+  ctx.lineTo(x + w, y + h - br);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+  ctx.lineTo(x + bl, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
+  ctx.lineTo(x, y + tl);
+  ctx.quadraticCurveTo(x, y, x + tl, y);
+  ctx.closePath();
 }
 
 // ═══════════════════════════════════════════════════════════

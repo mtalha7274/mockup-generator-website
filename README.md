@@ -5,8 +5,8 @@ This project is a static vanilla HTML/CSS/JS mockup generator website. There is 
 ## Main Files
 
 - `index.html` contains the marketing landing page for the free App Store and Play Store mockup generator. It should stay static and must not initialize the editor app.
-- `editor.html` contains the editor UI markup, styles, state, rendering logic, interactions, property panel, project import/export, keyboard shortcuts, and mockup export code.
-- `tests/frame-feature.test.mjs` is a lightweight Node test that checks the landing/editor split plus the editor's device-frame, project-file, toolbar, and export wiring.
+- `editor.html` contains the editor UI markup, styles, state, rendering logic, interactions, autosave, property panel, project import/export, keyboard shortcuts, and mockup export code.
+- `tests/frame-feature.test.mjs` is a lightweight Node test that checks the landing/editor split plus the editor's autosave, device-frame, project-file, toolbar, and export wiring.
 - Keep changes small and local. Most behavior is organized with large comment banners in the script.
 
 ## Where To Change Things
@@ -21,8 +21,15 @@ This project is a static vanilla HTML/CSS/JS mockup generator website. There is 
 - **Snapping guides:** the `SNAP STATE & PERSISTENT GUIDE SYSTEM` section manages alignment guides while dragging.
 - **Right properties panel:** `renderPanel()` and the `build*Section()` functions create the controls for canvas and selected element properties.
 - **Top toolbar and left tools:** `setupToolbar()` wires undo/redo, zoom, fit-to-view, mockup gap, device-frame buttons, project import, the export menu, the left tool buttons, and the left-panel plus button. Canvas dimensions live in the right properties panel, not the top toolbar.
-- **Project files:** `exportProject()`, `importProjectFile()`, `buildProjectPayload()`, and `normalizeProjectState()` save and restore `.mockup` files with canvases, selection, zoom, mockup gap, and workspace scroll.
+- **Project files and autosave:** `exportProject()`, `importProjectFile()`, `buildProjectPayload()`, `normalizeProjectState()`, `saveAutosaveState()`, `loadAutosaveState()`, and `applyProjectState()` save and restore `.mockup` files and local autosave data with canvases, selection, zoom, mockup gap, and workspace scroll.
 - **Export:** `exportPNG()` exports all canvases as exact-size PNGs, using `html2canvas` when available and falling back to canvas drawing helpers such as `drawElCtx()` and `drawFrameCtx()`. Multi-canvas exports are zipped. Export uses an offscreen capture surface and shows the small export status card while it works.
+
+## Autosave And Reload Behavior
+
+- The editor does not register a native `beforeunload` handler. Avoid adding one back because it can trigger disruptive browser leave-site dialogs during normal window switching in some environments.
+- The editor autosaves the current project to `localStorage` under `mockup-generator-autosave` whenever `snap()` records a new history state.
+- On editor startup, `init()` attempts to restore the autosaved project before creating a fresh default canvas. Autosave uses the same payload shape as `.mockup` project export/import.
+- Manual `.mockup` export/import is still the portable backup format; local autosave is only a browser-local recovery safety net.
 
 ## Toolbar Flow
 
@@ -61,6 +68,8 @@ git diff --check
 
 - Preserve `S.activeId` and `S.selIds` when changing canvas or selection behavior in `editor.html`.
 - Keep editor behavior tests pointed at `editor.html`; `index.html` is the landing page and should not contain editor initialization such as `init();`.
+- Do not add `beforeunload`/`event.returnValue` reload protection. Prefer autosave or in-app prompts for data safety.
+- If changing autosave or project import/export, keep `.mockup` payloads and `localStorage` autosave restoration in sync.
 - If changing zoom or multi-canvas layout, check both `createCanvasShell()` and `fitCanvas()`.
 - If changing top canvas buttons, update `createCanvasChrome()` and the related CSS near `CANVAS TOP CHROME`.
 - If changing device-frame geometry, update the frame tests and visually verify the notch/punch-hole alignment with a real screenshot.

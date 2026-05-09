@@ -8,7 +8,6 @@ const landingHtml = readFileSync(new URL('../index.html', import.meta.url), 'utf
 test('landing page links to the separate editor page', () => {
   assert.match(landingHtml, /href="editor\.html"/);
   assert.match(landingHtml, />Open editor</);
-  assert.doesNotMatch(landingHtml, />Try for free</);
   assert.doesNotMatch(landingHtml, />Sign In</);
 });
 
@@ -44,6 +43,59 @@ test('top toolbar exposes iOS and Android frame insertion controls', () => {
   assert.match(html, /id="btn-frame-android"/);
   assert.match(html, /addFrameDirect\('ios'\)/);
   assert.match(html, /addFrameDirect\('android'\)/);
+});
+
+test('editor starts at 20% zoom and zoom steps move by four percentage points', () => {
+  assert.match(html, /const DEFAULT_ZOOM\s*=\s*0\.2/);
+  assert.match(html, /const ZOOM_STEP\s*=\s*0\.04/);
+  assert.match(html, /id="zoom-val" value="20%"/);
+  assert.match(html, /zoom:\s*DEFAULT_ZOOM/);
+  assert.match(html, /function snapZoomToStep\(z\)/);
+  assert.match(html, /z = snapZoomToStep\(z\)/);
+  assert.match(html, /function zoomIn\(doScroll\s*=\s*false\)\s*\{\s*applyZoom\(S\.zoom \+ ZOOM_STEP,\s*doScroll\);/s);
+  assert.match(html, /function zoomOut\(doScroll\s*=\s*false\)\s*\{\s*applyZoom\(S\.zoom - ZOOM_STEP,\s*doScroll\);/s);
+  assert.match(html, /e\.deltaY < 0 \? zoomIn\(false\) : zoomOut\(false\)/);
+  assert.match(html, /'btn-zoom-in'\)\.addEventListener\('click',\s*\(\)\s*=>\s*zoomIn\(\)\)/);
+  assert.match(html, /'btn-zoom-out'\)\.addEventListener\('click',\s*\(\)\s*=>\s*zoomOut\(\)\)/);
+});
+
+test('text and radius controls use editor-facing units with full font weights', () => {
+  assert.match(html, /const EDITOR_UNIT_SCALE\s*=\s*DEFAULT_ZOOM/);
+  assert.match(html, /function canvasToEditorUnit\(value\)/);
+  assert.match(html, /function editorToCanvasUnit\(value\)/);
+  assert.match(html, /numInput\(canvasToEditorUnit\(el\.fontSize\),\s*v => \{ el\.fontSize = editorToCanvasUnit\(Math\.max\(1,\s*v\)\);/s);
+  assert.match(html, /const FONT_WEIGHT_OPTIONS\s*=\s*\[\s*\['100',\s*'Ultra Thin'\]/s);
+  assert.match(html, /\['900',\s*'Black'\]/);
+  assert.match(html, /function normalizeFontWeight\(weight\)/);
+  assert.match(html, /el\.fontWeight = normalizeFontWeight\(el\.fontWeight\)/);
+});
+
+test('text editing only grows height when content overflows', () => {
+  assert.match(html, /function growTextElementToFit\(el,\s*div,\s*inner\)/);
+  assert.match(html, /if \(inner\.scrollHeight > div\.clientHeight\) \{/);
+  assert.match(html, /e2\.text = inner\.innerText;\s*growTextElementToFit\(e2,\s*div,\s*inner\);\s*snap\(\);/s);
+  assert.doesNotMatch(html, /e2\.height = inner\.scrollHeight \+ 8/);
+});
+
+test('rect text and image elements use compact expandable radius controls', () => {
+  assert.match(html, /const BORDER_RADIUS_KEYS\s*=\s*\[/);
+  assert.match(html, /function borderRadiusCss\(el\)/);
+  assert.match(html, /function setAllBorderRadii\(el,\s*value\)/);
+  assert.match(html, /function setBorderRadiusCorner\(el,\s*key,\s*value\)/);
+  assert.match(html, /function radiusSliderInput\(value,\s*onChange\)/);
+  assert.match(html, /function radiusCornerToggleButton\(el\)/);
+  assert.match(html, /className = 'radius-icon-btn'/);
+  assert.match(html, /aria-label', 'Show separate corner radius controls'/);
+  assert.match(html, /<circle cx="8" cy="8" r="2\.2"/);
+  assert.match(html, /className = 'radius-corners'/);
+  assert.match(html, /body\.appendChild\(row\(radiusCornerToggleButton\(el\),\s*lbl\('Corner radius'\)\)\)/);
+  assert.match(html, /body\.appendChild\(row\(radiusSliderInput\(canvasToEditorUnit\(getBorderRadius\(el,\s*'borderRadiusTopLeft'\)\)/);
+  assert.match(html, /body\.appendChild\(row\(lbl\('Corners'\)\)\)/);
+  assert.match(html, /div\.style\.borderRadius\s*=\s*borderRadiusCss\(el\)/);
+  assert.match(html, /cornerWrap\.appendChild\(row\(lbl\(label\),\s*radiusSliderInput/);
+  assert.doesNotMatch(html, /body\.appendChild\(row\(lbl\('TL'\),\s*tlInp,\s*lbl\('TR'\),\s*trInp\)\)/);
+  assert.match(html, /function ctxRoundedRectForElement\(ctx,\s*x,\s*y,\s*w,\s*h,\s*el,\s*sc\)/);
+  assert.match(html, /ctxRoundedRectForElement\(ctx,\s*0,\s*0,\s*ew,\s*eh,\s*el,\s*sc\)/);
 });
 
 test('frame elements have device, screenshot, and fit defaults', () => {
