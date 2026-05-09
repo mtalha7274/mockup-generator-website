@@ -1,16 +1,18 @@
 # Mockup Generator Code Guide
 
-This project is a single-page vanilla HTML/CSS/JS mockup editor. There is no build step: open `index.html` in a browser and the app runs directly.
+This project is a static vanilla HTML/CSS/JS mockup generator website. There is no build step: open `index.html` for the public landing page, then use `editor.html` for the mockup editor.
 
 ## Main Files
 
-- `index.html` contains the UI markup, styles, state, rendering logic, interactions, property panel, project import/export, keyboard shortcuts, and mockup export code.
-- `tests/frame-feature.test.mjs` is a lightweight Node test that checks the device-frame, project-file, toolbar, and export wiring.
+- `index.html` contains the marketing landing page for the free App Store and Play Store mockup generator. It should stay static and must not initialize the editor app.
+- `editor.html` contains the editor UI markup, styles, state, rendering logic, interactions, autosave, property panel, project import/export, keyboard shortcuts, and mockup export code.
+- `tests/frame-feature.test.mjs` is a lightweight Node test that checks the landing/editor split plus the editor's autosave, device-frame, project-file, toolbar, and export wiring.
 - Keep changes small and local. Most behavior is organized with large comment banners in the script.
 
 ## Where To Change Things
 
-- **App state and data models:** `S`, `newCanvas()`, `newEl()`, `directElementDefaults()`, and `nextZ()` define canvases, elements, selection, zoom, history, and defaults.
+- **Landing page:** keep homepage edits in `index.html`; primary calls to action should link to `editor.html`.
+- **App state and data models:** in `editor.html`, `S`, `newCanvas()`, `newEl()`, `directElementDefaults()`, and `nextZ()` define canvases, elements, selection, zoom, history, and defaults.
 - **Canvas rendering:** `renderAllCanvases()` orchestrates the visible mockups. The smaller helpers `createCanvasShell()`, `createCanvasChrome()`, `createCanvasDeleteButton()`, `createCanvasDuplicateButton()`, and `appendCanvasInteractionLayers()` act like UI components.
 - **Element rendering:** `renderElements()`, `renderElementsForCanvas()`, `renderElInContainer()`, and `drawElVisual()` draw shapes, text, images, selection outlines, and handles.
 - **Device frames:** Frame visuals are code-drawn in the `.frame-*` CSS rules and the `frame` branch of `drawElVisual()`. `directElementDefaults()`, `addFrameDirect()`, `buildFrameSection()`, `applyFrameFileToElement()`, and `bindFrameDropTarget()` handle sizing, insertion, properties, uploads, and screenshot drag/drop.
@@ -19,8 +21,15 @@ This project is a single-page vanilla HTML/CSS/JS mockup editor. There is no bui
 - **Snapping guides:** the `SNAP STATE & PERSISTENT GUIDE SYSTEM` section manages alignment guides while dragging.
 - **Right properties panel:** `renderPanel()` and the `build*Section()` functions create the controls for canvas and selected element properties.
 - **Top toolbar and left tools:** `setupToolbar()` wires undo/redo, zoom, fit-to-view, mockup gap, device-frame buttons, project import, the export menu, the left tool buttons, and the left-panel plus button. Canvas dimensions live in the right properties panel, not the top toolbar.
-- **Project files:** `exportProject()`, `importProjectFile()`, `buildProjectPayload()`, and `normalizeProjectState()` save and restore `.mockup` files with canvases, selection, zoom, mockup gap, and workspace scroll.
+- **Project files and autosave:** `exportProject()`, `importProjectFile()`, `buildProjectPayload()`, `normalizeProjectState()`, `saveAutosaveState()`, `loadAutosaveState()`, and `applyProjectState()` save and restore `.mockup` files and local autosave data with canvases, selection, zoom, mockup gap, and workspace scroll.
 - **Export:** `exportPNG()` exports all canvases as exact-size PNGs, using `html2canvas` when available and falling back to canvas drawing helpers such as `drawElCtx()` and `drawFrameCtx()`. Multi-canvas exports are zipped. Export uses an offscreen capture surface and shows the small export status card while it works.
+
+## Autosave And Reload Behavior
+
+- The editor does not register a native `beforeunload` handler. Avoid adding one back because it can trigger disruptive browser leave-site dialogs during normal window switching in some environments.
+- The editor autosaves the current project to `localStorage` under `mockup-generator-autosave` whenever `snap()` records a new history state.
+- On editor startup, `init()` attempts to restore the autosaved project before creating a fresh default canvas. Autosave uses the same payload shape as `.mockup` project export/import.
+- Manual `.mockup` export/import is still the portable backup format; local autosave is only a browser-local recovery safety net.
 
 ## Toolbar Flow
 
@@ -43,7 +52,7 @@ This project is a single-page vanilla HTML/CSS/JS mockup editor. There is no bui
 
 ## Tests
 
-- Run the frame feature checks with:
+- Run the landing/editor and frame feature checks with:
 
 ```bash
 node --test tests/frame-feature.test.mjs
@@ -57,7 +66,10 @@ git diff --check
 
 ## Notes For Future AI Edits
 
-- Preserve `S.activeId` and `S.selIds` when changing canvas or selection behavior.
+- Preserve `S.activeId` and `S.selIds` when changing canvas or selection behavior in `editor.html`.
+- Keep editor behavior tests pointed at `editor.html`; `index.html` is the landing page and should not contain editor initialization such as `init();`.
+- Do not add `beforeunload`/`event.returnValue` reload protection. Prefer autosave or in-app prompts for data safety.
+- If changing autosave or project import/export, keep `.mockup` payloads and `localStorage` autosave restoration in sync.
 - If changing zoom or multi-canvas layout, check both `createCanvasShell()` and `fitCanvas()`.
 - If changing top canvas buttons, update `createCanvasChrome()` and the related CSS near `CANVAS TOP CHROME`.
 - If changing device-frame geometry, update the frame tests and visually verify the notch/punch-hole alignment with a real screenshot.
