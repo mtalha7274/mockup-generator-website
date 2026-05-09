@@ -66,3 +66,13 @@ test('export rendering uses an isolated canvas surface without workspace shadows
   assert.match(html, /container\.className\s*=\s*'export-canvas'/);
   assert.match(html, /container\.style\.boxShadow\s*=\s*'none'/);
 });
+
+test('export shows progress without flashing the capture surface onscreen', () => {
+  assert.match(html, /id="export-status"/);
+  assert.match(html, /function showExportStatus\(message\)/);
+  assert.match(html, /function hideExportStatus\(\)/);
+  assert.match(html, /setExportBusy\(true\)/);
+  assert.match(html, /finally\s*\{\s*setExportBusy\(false\);\s*hideExportStatus\(\);/s);
+  assert.match(html, /container\.style\.left\s*=\s*'-100000px'/);
+  assert.match(html, /container\.style\.zIndex\s*=\s*'-1'/);
+});
