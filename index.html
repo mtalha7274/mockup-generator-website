@@ -467,6 +467,7 @@ body.resizing-panel #panel-resizer::after {
 .pi:focus { border-color: var(--accent); }
 .pi-sm { max-width: 56px; }
 .pi-xs { max-width: 44px; }
+.pi-transform { max-width: 62px; }
 .pi-full { max-width: none; }
 .p-slider {
   -webkit-appearance: none;
@@ -610,10 +611,6 @@ select.pi option { background: #2a2a2a; }
       <button type="button" class="tool-btn" data-tool="line" title="Line">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="14" x2="14" y2="2"/></svg>
         <span>Line</span>
-      </button>
-      <button type="button" class="tool-btn" data-tool="arrow" title="Arrow">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="14" x2="14" y2="2"/><polyline points="7,2 14,2 14,9"/></svg>
-        <span>Arrow</span>
       </button>
       <button type="button" class="tool-btn" data-tool="text" title="Text">
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v2.5H9.5V13h-3V5.5H2V3z"/></svg>
@@ -1506,11 +1503,13 @@ function buildTransformSection(root, el) {
 
   const xInp = numInput(el.x, v => { el.x = v; refreshEl(el); snap(); });
   const yInp = numInput(el.y, v => { el.y = v; refreshEl(el); snap(); });
+  xInp.classList.add('pi-transform'); yInp.classList.add('pi-transform');
   xInp.style.flex = '1'; yInp.style.flex = '1';
   body.appendChild(row(lbl('X / Y'), xInp, yInp));
 
   const wInp = numInput(el.width, v => { el.width  = Math.max(1, v); refreshEl(el); snap(); }, { min: 1 });
   const hInp = numInput(el.height, v => { el.height = Math.max(1, v); refreshEl(el); snap(); }, { min: 1 });
+  wInp.classList.add('pi-transform'); hInp.classList.add('pi-transform');
   wInp.style.flex = '1'; hInp.style.flex = '1';
   body.appendChild(row(lbl('W / H'), wInp, hInp));
 
@@ -1676,13 +1675,55 @@ function buildTextSection(root, el) {
 }
 
 // ── Image ──
+function imageSizeFromSrc(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function fitImageElementToSource(el, size) {
+  if (!size || !size.width || !size.height) return;
+  const cv = activeCV();
+  const maxW = cv ? cv.width : size.width;
+  const maxH = cv ? cv.height : size.height;
+  const scale = Math.min(1, maxW / size.width, maxH / size.height);
+  const nextW = Math.max(1, Math.round(size.width * scale));
+  const nextH = Math.max(1, Math.round(size.height * scale));
+  const cx = el.x + el.width / 2;
+  const cy = el.y + el.height / 2;
+
+  el.width = nextW;
+  el.height = nextH;
+  el.x = Math.round(cx - nextW / 2);
+  el.y = Math.round(cy - nextH / 2);
+
+  if (cv) {
+    el.x = Math.max(0, Math.min(el.x, cv.width - nextW));
+    el.y = Math.max(0, Math.min(el.y, cv.height - nextH));
+  }
+}
+
+async function applyImageFileToElement(el, file) {
+  const src = await new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+  el.src = src;
+  fitImageElementToSource(el, await imageSizeFromSrc(src));
+  refreshEl(el);
+  snap();
+  renderPanel();
+}
+
 function chooseImageForElement(el) {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
   inp.addEventListener('change', () => {
     const f = inp.files[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => { el.src = ev.target.result; refreshEl(el); snap(); renderPanel(); };
-    r.readAsDataURL(f);
+    applyImageFileToElement(el, f);
   });
   inp.click();
 }
@@ -1891,7 +1932,7 @@ function bindElEvents(div) {
 
   div.addEventListener('pointerdown', e => {
     if (e.target.classList.contains('rh')) return;
-    if (e.target.classList.contains('text-inner')) return;
+    if (e.target.classList.contains('text-inner') && e.target.contentEditable === 'true') return;
     const id = div.dataset.id;
     const el = getEl(id); if (!el || el.locked) return;
     e.stopPropagation();
@@ -2011,7 +2052,7 @@ function onPtrUp(e) {
       const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*';
       inp.addEventListener('change', () => {
         const f=inp.files[0]; if(!f) return;
-        const r=new FileReader(); r.onload=ev=>{ el.src=ev.target.result; refreshEl(el); snap(); }; r.readAsDataURL(f);
+        applyImageFileToElement(el, f);
       });
       inp.click();
     }
