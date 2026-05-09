@@ -80,7 +80,6 @@ body {
 }
 .tb-input:focus { border-color: var(--accent); }
 #zoom-val { width: 54px; }
-#cv-w, #cv-h { width: 58px; }
 #mockup-gap { width: 58px; }
 .tb-select {
   height: 28px;
@@ -94,6 +93,48 @@ body {
   cursor: pointer;
 }
 .tb-select option { background: #333; }
+.export-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.tb-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 150px;
+  padding: 5px;
+  border-radius: 7px;
+  background: rgba(35,35,35,.98);
+  border: 1px solid var(--border-light);
+  box-shadow: 0 10px 28px rgba(0,0,0,.28);
+  z-index: 40000;
+}
+.tb-menu.hidden {
+  display: none;
+}
+.tb-menu-item {
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tb-menu-item svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+.tb-menu-item:hover {
+  background: rgba(255,255,255,.09);
+}
 
 /* ── MAIN AREA ─────────────────────────────────────────── */
 #main {
@@ -359,6 +400,105 @@ body {
   height: var(--placeholder-icon, 38px);
   overflow: visible;
 }
+.image-placeholder span {
+  max-width: 82%;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.frame-shell {
+  position: absolute;
+  inset: 0;
+  background: #070707;
+  border: max(4px, 1.2%) solid #070707;
+  box-shadow: none;
+  overflow: visible;
+}
+.frame-shell.frame-ios {
+  border-radius: 13% / 6%;
+}
+.frame-shell.frame-android {
+  border-radius: 9% / 4.5%;
+}
+.frame-screen {
+  position: absolute;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.1);
+}
+.frame-ios .frame-screen {
+  left: 2.2%;
+  right: 2.2%;
+  top: 1.2%;
+  bottom: 1.2%;
+  border-radius: 11% / 5.1%;
+}
+.frame-android .frame-screen {
+  left: 2.6%;
+  right: 2.6%;
+  top: 1.7%;
+  bottom: 1.7%;
+  border-radius: 7% / 3.5%;
+}
+.frame-screen img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.frame-dynamic-island {
+  position: absolute;
+  left: 35.1%;
+  top: 2.8%;
+  width: 29.8%;
+  height: 4.1%;
+  border-radius: 999px;
+  background: #000;
+  z-index: 3;
+  box-shadow: inset -10px 0 16px rgba(255,255,255,.05);
+  pointer-events: none;
+}
+.frame-dynamic-island::after {
+  content: '';
+  position: absolute;
+  right: 12%;
+  top: 24%;
+  width: 12%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 62% 38%, #202733 0 18%, #07090d 48%, #010101 100%);
+}
+.frame-punch-hole {
+  position: absolute;
+  left: 50%;
+  top: 3.9%;
+  width: 4.5%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #050505;
+  z-index: 3;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), inset 0 0 6px rgba(255,255,255,.08);
+  pointer-events: none;
+}
+.frame-side-button {
+  position: absolute;
+  width: 1.5%;
+  min-width: 3px;
+  border-radius: 999px;
+  background: #070707;
+  box-shadow: none;
+  pointer-events: none;
+}
+.frame-side-button.left-one { left: -1.3%; top: 20%; height: 7%; }
+.frame-side-button.left-two { left: -1.3%; top: 31%; height: 9%; }
+.frame-side-button.left-three { left: -1.3%; top: 42%; height: 9%; }
+.frame-side-button.right-one { right: -1.3%; top: 34%; height: 15%; }
+.frame-empty .frame-screen {
+  background: #f7fbff;
+}
 
 /* multi-select box */
 #sel-box {
@@ -538,6 +678,48 @@ select.pi {
 }
 select.pi option { background: #2a2a2a; }
 
+/* ── EXPORT STATUS ─────────────────────────────────────── */
+#export-status {
+  position: fixed;
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
+  z-index: 30000;
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(28,28,28,.96);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.32);
+  color: var(--text);
+  pointer-events: none;
+}
+#export-status.hidden {
+  display: none;
+}
+.export-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.25);
+  border-top-color: var(--accent);
+  animation: export-spin .8s linear infinite;
+  flex: 0 0 auto;
+}
+#export-status-text {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+@keyframes export-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── SCROLLBARS ────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -565,21 +747,38 @@ select.pi option { background: #2a2a2a; }
   <span class="tb-label">Gap</span>
   <input class="tb-input" id="mockup-gap" type="number" min="0" max="600" value="8" title="Space between mockups">
   <div class="tb-sep"></div>
-  <span class="tb-label">Canvas</span>
-  <input class="tb-input" id="cv-w" type="number" value="1284" title="Width">
-  <span class="tb-label">×</span>
-  <input class="tb-input" id="cv-h" type="number" value="2778" title="Height">
-  <select class="tb-select" id="preset-sel">
-    <option value="">Presets…</option>
-    <option value="1284x2778">iPhone 15 Pro Max</option>
-    <option value="1170x2532">iPhone 14</option>
-    <option value="1080x1920">Android</option>
-    <option value="2048x2732">iPad Pro</option>
-  </select>
-  <div class="tb-sep"></div>
-  <button class="tb-btn" id="btn-export" title="Export PNG or ZIP">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5v8l2.5-2.5 1 1L8 11.5l-3.5-3.5 1-1L8 9.5v-8h1zM2 13.5h12v1.5H2v-1.5z"/></svg>Export
+  <span class="tb-label">Frames</span>
+  <button class="tb-btn" id="btn-frame-ios" title="Add iOS frame">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="1.5" width="8" height="13" rx="2.3"/><path d="M6.5 3.2h3"/></svg>iOS
   </button>
+  <button class="tb-btn" id="btn-frame-android" title="Add Android frame">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="1.5" width="8" height="13" rx="1.8"/><circle cx="8" cy="3.6" r=".7" fill="currentColor" stroke="none"/></svg>Android
+  </button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btn-project-import" title="Import project file">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 2.5h10v11H3z"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>Open
+  </button>
+  <input id="project-import-input" type="file" accept=".mockup,application/json" hidden>
+  <div class="export-menu-wrap">
+    <button class="tb-btn" id="btn-export" title="Export project or mockups" aria-haspopup="menu" aria-expanded="false">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5v8l2.5-2.5 1 1L8 11.5l-3.5-3.5 1-1L8 9.5v-8h1zM2 13.5h12v1.5H2v-1.5z"/></svg>Export
+    </button>
+    <div class="tb-menu hidden" id="export-menu" role="menu">
+      <button class="tb-menu-item" id="export-project-option" type="button" role="menuitem">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 2.5h6l4 4v7H3z"/><path d="M9 2.5v4h4"/><path d="M5.5 10.5h5"/></svg>
+        <span>Project</span>
+      </button>
+      <button class="tb-menu-item" id="export-mockups-option" type="button" role="menuitem">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="3" width="8" height="6" rx="1"/><rect x="5.5" y="7" width="8" height="6" rx="1"/><path d="M4.5 11.5h4"/></svg>
+        <span>Mockups</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="export-status" class="hidden" role="status" aria-live="polite" aria-atomic="true">
+  <div class="export-spinner"></div>
+  <div id="export-status-text">Preparing export...</div>
 </div>
 
 <!-- ── MAIN AREA ── -->
@@ -659,9 +858,12 @@ const S = {
 let _elSeq = 0, _cvSeq = 0;
 const uid  = () => 'e' + (++_elSeq);
 const cvid = () => 'c' + (++_cvSeq);
+const IPHONE_16_PRO_SCREEN = { width: 1206, height: 2622 };
+const FRAME_COLOR = '#070707';
 
 const activeCV = () => S.canvases.find(c => c.id === S.activeId) || S.canvases[0];
 const getEl    = id => { const cv = activeCV(); return cv ? cv.elements.find(e => e.id === id) : null; };
+const PROJECT_FILE_VERSION = 1;
 
 // ═══════════════════════════════════════════════════════════
 // HISTORY
@@ -713,6 +915,7 @@ function newEl(type, x, y, w, h) {
     arrow:    { strokeColor: '#333333', strokeWidth: 2, lineStyle: 'solid', arrowHead: 'end' },
     text:     { text: 'Text', fontFamily: 'Inter, sans-serif', fontSize: 32, fontWeight: 'normal', fontStyle: 'normal', underline: false, textColor: '#000000', textAlign: 'left', autoH: true, fillColor: 'transparent', fillAlpha: 0, borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
     image:    { src: '', fitMode: 'fill', borderColor: '#000000', borderWidth: 0, borderRadius: 0 },
+    frame:    { device: 'ios', src: '', fitMode: 'stretch' },
   };
   return Object.assign(base, defaults[type] || {});
 }
@@ -749,6 +952,15 @@ function directElementDefaults(type, cv) {
       overrides: { fitMode: 'fit' }
     };
   }
+  if (type === 'frame') {
+    const frameAspect = IPHONE_16_PRO_SCREEN.height / IPHONE_16_PRO_SCREEN.width;
+    const width = Math.round(Math.min(cv.width * 0.76, 1040 / Math.max(S.zoom, 0.04), cv.height * 0.98 / frameAspect));
+    return {
+      width,
+      height: Math.round(width * frameAspect),
+      overrides: { device: 'ios', fitMode: 'stretch' }
+    };
+  }
   return null;
 }
 
@@ -758,6 +970,21 @@ function addElementDirect(type) {
   const x = Math.round((cv.width - def.width) / 2);
   const y = Math.round((cv.height - def.height) / 2);
   const el = Object.assign(newEl(type, x, y, def.width, def.height), def.overrides || {});
+  cv.elements.push(el);
+  S.selIds = [el.id];
+  setTool('select');
+  snap();
+  renderAll();
+}
+
+function addFrameDirect(device) {
+  const cv = activeCV(); if (!cv) return;
+  const def = directElementDefaults('frame', cv); if (!def) return;
+  const width = device === 'android' ? Math.round(def.width * 0.94) : def.width;
+  const height = device === 'android' ? Math.round(def.height * 0.97) : def.height;
+  const x = Math.round((cv.width - width) / 2);
+  const y = Math.round((cv.height - height) / 2);
+  const el = Object.assign(newEl('frame', x, y, width, height), def.overrides || {}, { device });
   cv.elements.push(el);
   S.selIds = [el.id];
   setTool('select');
@@ -900,9 +1127,7 @@ function applyCanvasSize() {
 }
 
 function syncDimInputs() {
-  const cv = activeCV(); if (!cv) return;
-  document.getElementById('cv-w').value = cv.width;
-  document.getElementById('cv-h').value = cv.height;
+  // Canvas dimensions are edited from the properties panel.
 }
 
 function syncGapInput() {
@@ -1080,7 +1305,7 @@ function renderOverflowForCanvas(targetCv, root, canvasId, opts = {}) {
   const prev = S.canvases[targetIndex - 1];
   if (prev) {
     prev.elements
-      .filter(el => el.x + el.width > prev.width)
+      .filter(el => elementVisualBounds(el).right > prev.width)
       .forEach(el => {
         renderOverflowGhost(el, root, canvasId, el.x - prev.width, el.y, 'from-prev', opts);
       });
@@ -1089,11 +1314,43 @@ function renderOverflowForCanvas(targetCv, root, canvasId, opts = {}) {
   const next = S.canvases[targetIndex + 1];
   if (next) {
     next.elements
-      .filter(el => el.x < 0)
+      .filter(el => elementVisualBounds(el).left < 0)
       .forEach(el => {
         renderOverflowGhost(el, root, canvasId, targetCv.width + el.x, el.y, 'from-next', opts);
       });
   }
+}
+
+function elementVisualBounds(el) {
+  const left = el.x;
+  const top = el.y;
+  const right = el.x + el.width;
+  const bottom = el.y + el.height;
+  if (!el.rotation) return { left, top, right, bottom };
+
+  const angle = el.rotation * Math.PI / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const cx = el.x + el.width / 2;
+  const cy = el.y + el.height / 2;
+  const halfW = el.width / 2;
+  const halfH = el.height / 2;
+  const corners = [
+    [-halfW, -halfH],
+    [ halfW, -halfH],
+    [ halfW,  halfH],
+    [-halfW,  halfH],
+  ].map(([x, y]) => ({
+    x: cx + x * cos - y * sin,
+    y: cy + x * sin + y * cos,
+  }));
+
+  return {
+    left: Math.min(...corners.map(p => p.x)),
+    top: Math.min(...corners.map(p => p.y)),
+    right: Math.max(...corners.map(p => p.x)),
+    bottom: Math.max(...corners.map(p => p.y)),
+  };
 }
 
 function renderOverflowGhost(sourceEl, root, canvasId, x, y, direction, opts = {}) {
@@ -1246,6 +1503,55 @@ function drawElVisual(div, el) {
       } else if (ph) {
         ph.remove();
       }
+      break;
+    }
+    case 'frame': {
+      div.style.background = 'transparent';
+      div.style.border = 'none';
+      div.style.borderRadius = '0';
+      div.style.overflow = 'visible';
+      clearSvg(div);
+      div.querySelectorAll(':scope > img, :scope > .image-clip').forEach(node => node.remove());
+      let shell = div.querySelector(':scope > .frame-shell');
+      if (!shell) {
+        shell = document.createElement('div');
+        div.appendChild(shell);
+      }
+      shell.className = 'frame-shell frame-' + (el.device === 'android' ? 'android' : 'ios') + (el.src ? '' : ' frame-empty');
+      shell.innerHTML = '';
+
+      const screen = document.createElement('div');
+      screen.className = 'frame-screen';
+      bindFrameDropTarget(screen, el);
+      shell.appendChild(screen);
+
+      if (el.src) {
+        const img = document.createElement('img');
+        img.src = el.src;
+        img.style.objectFit = el.fitMode === 'fit' ? 'contain' : el.fitMode === 'stretch' ? 'fill' : 'cover';
+        screen.appendChild(img);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'image-placeholder';
+        ph.innerHTML = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="3" width="18" height="26" rx="4"/><path d="M13 7h6"/><path d="M10 22l5-5 4 4 2-2 3 3"/></svg><span>Drop screenshot</span>';
+        screen.appendChild(ph);
+      }
+
+      if (el.device === 'android') {
+        const punch = document.createElement('div');
+        punch.className = 'frame-punch-hole';
+        shell.appendChild(punch);
+      } else {
+        const island = document.createElement('div');
+        island.className = 'frame-dynamic-island';
+        shell.appendChild(island);
+      }
+
+      ['left-one','left-two','left-three','right-one'].forEach(name => {
+        const button = document.createElement('div');
+        button.className = 'frame-side-button ' + name;
+        shell.appendChild(button);
+      });
       break;
     }
   }
@@ -1404,6 +1710,7 @@ function renderPanel() {
   if (['line','arrow'].includes(el.type)) buildStrokeSection(root, el);
   if (el.type === 'text')  buildTextSection(root, el);
   if (el.type === 'image') buildImageSection(root, el);
+  if (el.type === 'frame') buildFrameSection(root, el);
   buildLayerSection(root, el);
 }
 
@@ -1678,6 +1985,14 @@ function buildTextSection(root, el) {
 }
 
 // ── Image ──
+function fileToDataUrl(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.readAsDataURL(file);
+  });
+}
+
 function imageSizeFromSrc(src) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1710,11 +2025,7 @@ function fitImageElementToSource(el, size) {
 }
 
 async function applyImageFileToElement(el, file) {
-  const src = await new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = ev => resolve(ev.target.result);
-    reader.readAsDataURL(file);
-  });
+  const src = await fileToDataUrl(file);
   el.src = src;
   fitImageElementToSource(el, await imageSizeFromSrc(src));
   refreshEl(el);
@@ -1731,10 +2042,70 @@ function chooseImageForElement(el) {
   inp.click();
 }
 
+async function applyFrameFileToElement(el, file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  el.src = await fileToDataUrl(file);
+  refreshEl(el);
+  snap();
+  renderPanel();
+}
+
+function chooseFrameImageForElement(el) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.addEventListener('change', () => {
+    const f = inp.files[0]; if (!f) return;
+    applyFrameFileToElement(el, f);
+  });
+  inp.click();
+}
+
+function bindFrameDropTarget(screen, el) {
+  screen.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  screen.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
+    if (file) applyFrameFileToElement(el, file);
+  });
+}
+
 function buildImageSection(root, el) {
   const { wrap, body } = makeSection('Image');
   const upBtn = btn('📂 Upload', () => chooseImageForElement(el));
   upBtn.style.flex = '1'; body.appendChild(row(lbl('File'), upBtn));
+
+  const fitRow = document.createElement('div'); fitRow.className = 'pr'; fitRow.appendChild(lbl('Fit'));
+  ['fill','fit','stretch'].forEach(m => {
+    const b = btn(m, () => {
+      el.fitMode = m;
+      fitRow.querySelectorAll('.p-btn').forEach(x => x.classList.toggle('on', x.textContent === m));
+      refreshEl(el); snap();
+    }, el.fitMode === m);
+    b.style.flex = '1'; fitRow.appendChild(b);
+  });
+  body.appendChild(fitRow);
+
+  root.appendChild(wrap);
+}
+
+function buildFrameSection(root, el) {
+  const { wrap, body } = makeSection('Frame');
+  const upBtn = btn('Upload', () => chooseFrameImageForElement(el));
+  upBtn.style.flex = '1'; body.appendChild(row(lbl('Shot'), upBtn));
+
+  const deviceRow = document.createElement('div'); deviceRow.className = 'pr'; deviceRow.appendChild(lbl('Device'));
+  [['ios','iOS'], ['android','Android']].forEach(([value, label]) => {
+    const b = btn(label, () => {
+      el.device = value;
+      deviceRow.querySelectorAll('.p-btn').forEach(x => x.classList.toggle('on', x.textContent === label));
+      refreshEl(el); snap();
+    }, el.device === value);
+    b.style.flex = '1'; deviceRow.appendChild(b);
+  });
+  body.appendChild(deviceRow);
 
   const fitRow = document.createElement('div'); fitRow.className = 'pr'; fitRow.appendChild(lbl('Fit'));
   ['fill','fit','stretch'].forEach(m => {
@@ -1943,6 +2314,12 @@ function bindElEvents(div) {
       startTextEditing(inner);
       return;
     }
+    if (el.type === 'frame') {
+      e.preventDefault();
+      e.stopPropagation();
+      chooseFrameImageForElement(el);
+      return;
+    }
     if (el.type !== 'image') return;
     e.preventDefault();
     e.stopPropagation();
@@ -2010,7 +2387,7 @@ function onPtrMove(e) {
 
   } else if (IX.mode === 'resize') {
     const el = cv.elements.find(x => x.id === IX.elId); if (!el) return;
-    applyResize(el, dx, dy, IX.handle, e.shiftKey);
+    applyResize(el, dx, dy, IX.handle, e.shiftKey || el.type === 'frame');
     const div = document.querySelector(`.el[data-id="${el.id}"]`);
     if (div) { div.style.left=el.x+'px'; div.style.top=el.y+'px'; div.style.width=el.width+'px'; div.style.height=el.height+'px'; drawElVisual(div,el); syncHandles(div,el); }
     renderOverflowMirrors();
@@ -2388,7 +2765,16 @@ function setupToolbar() {
   document.getElementById('btn-zoom-in').addEventListener('click',  () => applyZoom(S.zoom + 0.1));
   document.getElementById('btn-zoom-out').addEventListener('click', () => applyZoom(S.zoom - 0.1));
   document.getElementById('btn-fit').addEventListener('click', fitCanvas);
-  document.getElementById('btn-export').addEventListener('click', exportPNG);
+  document.getElementById('btn-export').addEventListener('click', toggleExportMenu);
+  document.getElementById('export-project-option').addEventListener('click', () => runExportMenuAction(exportProject));
+  document.getElementById('export-mockups-option').addEventListener('click', () => runExportMenuAction(exportPNG));
+  const projectImportInput = document.getElementById('project-import-input');
+  document.getElementById('btn-project-import').addEventListener('click', () => projectImportInput.click());
+  projectImportInput.addEventListener('change', async () => {
+    const file = projectImportInput.files && projectImportInput.files[0];
+    projectImportInput.value = '';
+    if (file) await importProjectFile(file);
+  });
 
   const zv = document.getElementById('zoom-val');
   zv.addEventListener('change', () => { const v = parseFloat(zv.value); if (!isNaN(v)) applyZoom(v/100); });
@@ -2403,24 +2789,8 @@ function setupToolbar() {
     snap();
   });
 
-  document.getElementById('cv-w').addEventListener('change', e => {
-    const cv = activeCV(); if (!cv) return;
-    cv.width = Math.max(1, parseInt(e.target.value) || cv.width);
-    applyCanvasSize(); snap();
-  });
-  document.getElementById('cv-h').addEventListener('change', e => {
-    const cv = activeCV(); if (!cv) return;
-    cv.height = Math.max(1, parseInt(e.target.value) || cv.height);
-    applyCanvasSize(); snap();
-  });
-
-  document.getElementById('preset-sel').addEventListener('change', e => {
-    const val = e.target.value; e.target.value = '';
-    if (!val) return;
-    const [w,h] = val.split('x').map(Number);
-    const cv = activeCV(); if (!cv) return;
-    cv.width = w; cv.height = h; applyCanvasSize(); syncDimInputs(); snap();
-  });
+  document.getElementById('btn-frame-ios').addEventListener('click', () => addFrameDirect('ios'));
+  document.getElementById('btn-frame-android').addEventListener('click', () => addFrameDirect('android'));
 
   document.getElementById('btn-add-canvas').addEventListener('click', addNewCanvas);
 
@@ -2432,6 +2802,34 @@ function setupToolbar() {
       else setTool(tool);
     });
   });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.export-menu-wrap')) hideExportMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') hideExportMenu();
+  });
+}
+
+function toggleExportMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('export-menu');
+  const btn = document.getElementById('btn-export');
+  if (!menu || !btn) return;
+  const isOpen = menu.classList.toggle('hidden') === false;
+  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function hideExportMenu() {
+  const menu = document.getElementById('export-menu');
+  const btn = document.getElementById('btn-export');
+  if (menu) menu.classList.add('hidden');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function runExportMenuAction(action) {
+  hideExportMenu();
+  action();
 }
 
 function setupPanelResize() {
@@ -2612,28 +3010,181 @@ function ungroupSelected() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// PROJECT FILES
+// ═══════════════════════════════════════════════════════════
+function exportProject() {
+  const blob = new Blob([JSON.stringify(buildProjectPayload(), null, 2)], { type: 'application/json' });
+  downloadBlob(blob, projectFileName());
+}
+
+function buildProjectPayload() {
+  return {
+    app: 'mockup-generator',
+    version: PROJECT_FILE_VERSION,
+    exportedAt: new Date().toISOString(),
+    state: {
+      canvases: S.canvases,
+      activeId: S.activeId,
+      mockupGap: S.mockupGap,
+      zoom: S.zoom,
+      selIds: S.selIds,
+      workspaceScroll: workspaceScrollState()
+    }
+  };
+}
+
+function projectFileName() {
+  const cv = activeCV();
+  const base = (cv?.name || 'mockup-project').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-') || 'mockup-project';
+  return base + '.mockup';
+}
+
+function workspaceScrollState() {
+  const ws = document.getElementById('workspace');
+  return ws ? { left: ws.scrollLeft, top: ws.scrollTop } : { left: 0, top: 0 };
+}
+
+async function importProjectFile(file) {
+  try {
+    const payload = JSON.parse(await readProjectFile(file));
+    const state = normalizeProjectState(payload);
+    S.canvases = state.canvases;
+    S.activeId = state.activeId;
+    S.mockupGap = state.mockupGap;
+    S.zoom = state.zoom;
+    S.selIds = state.selIds;
+    S.clipboard = [];
+    S.tool = 'select';
+    S.history = [];
+    S.hIdx = -1;
+    rebuildIdSequences();
+    snap(); renderAll(); syncZoomInput();
+    requestAnimationFrame(() => restoreWorkspaceScroll(state.workspaceScroll));
+  } catch (error) {
+    console.error(error);
+    window.alert('Could not import this project file.');
+  }
+}
+
+function readProjectFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Could not read project file'));
+    reader.readAsText(file);
+  });
+}
+
+function normalizeProjectState(payload) {
+  const state = payload && payload.state ? payload.state : payload;
+  if (!state || !Array.isArray(state.canvases) || !state.canvases.length) {
+    throw new Error('Invalid project file');
+  }
+
+  const canvases = state.canvases.map(cv => ({
+    ...cv,
+    width: Math.max(1, Number(cv.width) || 1284),
+    height: Math.max(1, Number(cv.height) || 2778),
+    bgColor: cv.bgColor || '#ffffff',
+    elements: Array.isArray(cv.elements) ? cv.elements : []
+  }));
+  const activeId = canvases.some(cv => cv.id === state.activeId) ? state.activeId : canvases[0].id;
+  const elementIds = new Set(canvases.flatMap(cv => cv.elements.map(el => el.id)));
+  return {
+    canvases,
+    activeId,
+    mockupGap: Math.max(0, Math.min(600, Number(state.mockupGap) || 8)),
+    zoom: Math.max(0.04, Math.min(5, Number(state.zoom) || 1)),
+    selIds: Array.isArray(state.selIds) ? state.selIds.filter(id => elementIds.has(id)) : [],
+    workspaceScroll: state.workspaceScroll || { left: 0, top: 0 }
+  };
+}
+
+function rebuildIdSequences() {
+  _cvSeq = Math.max(0, ...S.canvases.map(cv => numericIdSuffix(cv.id, 'c')));
+  _elSeq = Math.max(0, ...S.canvases.flatMap(cv => cv.elements.map(el => numericIdSuffix(el.id, 'e'))));
+}
+
+function numericIdSuffix(id, prefix) {
+  const match = String(id || '').match(new RegExp('^' + prefix + '(\\d+)$'));
+  return match ? Number(match[1]) : 0;
+}
+
+function restoreWorkspaceScroll(scroll) {
+  const ws = document.getElementById('workspace');
+  if (!ws || !scroll) return;
+  ws.scrollLeft = Math.max(0, Number(scroll.left) || 0);
+  ws.scrollTop = Math.max(0, Number(scroll.top) || 0);
+}
+
+function syncZoomInput() {
+  const input = document.getElementById('zoom-val');
+  if (input) input.value = Math.round(S.zoom * 100) + '%';
+}
+
+// ═══════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════
 async function exportPNG() {
   const canvases = [...S.canvases];
   if (!canvases.length) return;
 
-  if (canvases.length === 1) {
-    const canvas = await renderCanvasForExport(canvases[0]);
-    download(canvas, exportFileName(canvases[0], 0));
-    return;
-  }
+  setExportBusy(true);
+  showExportStatus('Preparing export...');
+  await nextFrame();
+  try {
+    if (canvases.length === 1) {
+      showExportStatus('Exporting image...');
+      const canvas = await renderCanvasForExport(canvases[0]);
+      showExportStatus('Downloading image...');
+      download(canvas, exportFileName(canvases[0], 0));
+      return;
+    }
 
-  const files = [];
-  for (let i = 0; i < canvases.length; i++) {
-    const canvas = await renderCanvasForExport(canvases[i]);
-    files.push({
-      name: exportFileName(canvases[i], i) + '.png',
-      blob: await canvasToPngBlob(canvas)
-    });
-    await delay(180);
+    const files = [];
+    for (let i = 0; i < canvases.length; i++) {
+      showExportStatus(`Exporting ${i + 1} of ${canvases.length}...`);
+      const canvas = await renderCanvasForExport(canvases[i]);
+      files.push({
+        name: exportFileName(canvases[i], i) + '.png',
+        blob: await canvasToPngBlob(canvas)
+      });
+      await delay(180);
+    }
+    showExportStatus('Packaging ZIP...');
+    downloadBlob(await createZipBlob(files), exportArchiveName());
+  } catch (error) {
+    console.error(error);
+    showExportStatus('Export failed. Please try again.');
+    await delay(1200);
+  } finally {
+    setExportBusy(false);
+    hideExportStatus();
   }
-  downloadBlob(await createZipBlob(files), exportArchiveName());
+}
+
+function setExportBusy(isBusy) {
+  const btn = document.getElementById('btn-export');
+  if (!btn) return;
+  btn.disabled = isBusy;
+  btn.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+}
+
+function showExportStatus(message) {
+  const status = document.getElementById('export-status');
+  const text = document.getElementById('export-status-text');
+  if (!status || !text) return;
+  text.textContent = message;
+  status.classList.remove('hidden');
+}
+
+function hideExportStatus() {
+  const status = document.getElementById('export-status');
+  if (status) status.classList.add('hidden');
+}
+
+function nextFrame() {
+  return new Promise(resolve => requestAnimationFrame(() => resolve()));
 }
 
 async function renderCanvasForExport(cv) {
@@ -2669,9 +3220,9 @@ async function renderCanvasForExport(cv) {
 
 function createExportContainer(cv) {
   const container = document.createElement('div');
-  container.className = 'canvas-container export-canvas';
+  container.className = 'export-canvas';
   container.style.position = 'fixed';
-  container.style.left = '0';
+  container.style.left = '-100000px';
   container.style.top = '0';
   container.style.width = cv.width + 'px';
   container.style.height = cv.height + 'px';
@@ -2680,6 +3231,7 @@ function createExportContainer(cv) {
   container.style.boxShadow = 'none';
   container.style.transform = 'none';
   container.style.pointerEvents = 'none';
+  container.style.contain = 'layout style paint';
   container.style.zIndex = '-1';
   container.dataset.canvasId = `export-${cv.id}`;
   renderElementsForCanvas(cv, container, `export-${cv.id}`, { interactive: false, uiZoom: 1 });
@@ -2859,8 +3411,73 @@ function drawElCtx(ctx, el, sc) {
       if(el.src){const img=new Image();img.src=el.src;try{ctx.drawImage(img,0,0,ew,eh);}catch(e){}}
       else{ctx.fillStyle='#ccc';ctx.fillRect(0,0,ew,eh);}
       break;
+    case 'frame':
+      drawFrameCtx(ctx, el, ew, eh);
+      break;
   }
   ctx.restore();
+}
+
+function frameScreenMetrics(device, w, h) {
+  if (device === 'android') {
+    return { x: w * 0.026, y: h * 0.017, w: w * 0.948, h: h * 0.966, r: Math.min(w * 0.07, h * 0.035) };
+  }
+  return { x: w * 0.022, y: h * 0.012, w: w * 0.956, h: h * 0.976, r: Math.min(w * 0.11, h * 0.051) };
+}
+
+function drawFrameCtx(ctx, el, w, h) {
+  const device = el.device === 'android' ? 'android' : 'ios';
+  const border = Math.max(8, Math.min(w, h) * 0.028);
+  const radius = device === 'android' ? Math.min(w * 0.09, h * 0.045) : Math.min(w * 0.13, h * 0.06);
+
+  ctx.fillStyle = FRAME_COLOR;
+  ctx.beginPath(); ctxRR(ctx, 0, 0, w, h, radius); ctx.fill();
+  ctx.strokeStyle = FRAME_COLOR;
+  ctx.lineWidth = Math.max(1, border * 0.16);
+  ctx.stroke();
+
+  const screen = frameScreenMetrics(device, w, h);
+  ctx.save();
+  ctx.beginPath(); ctxRR(ctx, screen.x, screen.y, screen.w, screen.h, screen.r); ctx.clip();
+  ctx.fillStyle = el.src ? '#fff' : '#f7fbff';
+  ctx.fillRect(screen.x, screen.y, screen.w, screen.h);
+  if (el.src) {
+    const img = new Image();
+    img.src = el.src;
+    try {
+      drawObjectFitImageCtx(ctx, img, screen.x, screen.y, screen.w, screen.h, el.fitMode || 'fill');
+    } catch (e) {}
+  } else {
+    ctx.strokeStyle = 'rgba(77,157,224,.85)';
+    ctx.lineWidth = Math.max(1, Math.min(w, h) * 0.008);
+    ctx.setLineDash([12, 8]);
+    ctx.strokeRect(screen.x + screen.w * 0.16, screen.y + screen.h * 0.42, screen.w * 0.68, screen.h * 0.16);
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+
+  ctx.fillStyle = '#050505';
+  if (device === 'android') {
+    ctx.beginPath();
+    ctx.arc(w * 0.5, h * 0.039 + w * 0.0225, w * 0.0225, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const iw = w * 0.298, ih = h * 0.041;
+    ctx.beginPath(); ctxRR(ctx, w * 0.351, h * 0.028, iw, ih, ih / 2); ctx.fill();
+  }
+}
+
+function drawObjectFitImageCtx(ctx, img, x, y, w, h, fitMode) {
+  const iw = img.naturalWidth || img.width || w;
+  const ih = img.naturalHeight || img.height || h;
+  if (fitMode === 'stretch') {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+  const scale = fitMode === 'fit' ? Math.min(w / iw, h / ih) : Math.max(w / iw, h / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
 function ctxRR(ctx, x, y, w, h, r) {
