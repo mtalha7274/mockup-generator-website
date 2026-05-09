@@ -1103,6 +1103,32 @@ function directElementDefaults(type, cv) {
   return null;
 }
 
+function starterCanvasTemplate() {
+  const cv = newCanvas('Canvas 1', 1284, 2778);
+  cv.elements = [
+    Object.assign(newEl('text', 205.5, 155.35096153846166, 875.44140625, 280.16852678571433), {
+      zIndex: 2,
+      text: 'Add a title for this mockup',
+      fontSize: 120,
+      fontWeight: '700',
+      textAlign: 'center'
+    }),
+    Object.assign(newEl('text', 205.5, 443.57752403846155, 872.7349330357142, 300.0830614697802), {
+      zIndex: 3,
+      text: 'Add a suitable description for this mockup',
+      fontSize: 80,
+      fontWeight: '300',
+      textAlign: 'center'
+    }),
+    Object.assign(newEl('frame', 154, 780, 976, 2122), {
+      zIndex: 4,
+      device: 'ios',
+      fitMode: 'stretch'
+    })
+  ];
+  return cv;
+}
+
 function addElementDirect(type) {
   const cv = activeCV(); if (!cv) return;
   const def = directElementDefaults(type, cv); if (!def) return;
@@ -1142,7 +1168,7 @@ function init() {
     syncZoomInput();
     requestAnimationFrame(() => restoreWorkspaceScroll(restored.state.workspaceScroll));
   } else {
-    const cv = newCanvas('Canvas 1', 1284, 2778);
+    const cv = starterCanvasTemplate();
     S.canvases.push(cv); S.activeId = cv.id;
     snap();
     renderAll();

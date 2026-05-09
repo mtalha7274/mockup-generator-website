@@ -33,6 +33,15 @@ test('editor autosaves and restores projects after browser refresh', () => {
   assert.match(html, /if \(restored\) \{\s*applyProjectState\(restored\.state\);/s);
 });
 
+test('first-time editor startup uses a starter mockup while new canvases stay blank', () => {
+  assert.match(html, /function starterCanvasTemplate\(\)/);
+  assert.match(html, /Add a title for this mockup/);
+  assert.match(html, /Add a suitable description for this mockup/);
+  assert.match(html, /newEl\('frame',\s*154,\s*780,\s*976,\s*2122\)/);
+  assert.match(html, /const cv = starterCanvasTemplate\(\);\s*S\.canvases\.push\(cv\);\s*S\.activeId = cv\.id;/s);
+  assert.match(html, /function addNewCanvas\(\)\s*\{\s*const cv = newCanvas\(`Canvas \$\{S\.canvases\.length \+ 1\}`,\s*1284,\s*2778\);/s);
+});
+
 test('editor brand is not a link away from the editor', () => {
   assert.match(html, /<div class="editor-brand"[^>]*>/);
   assert.doesNotMatch(html, /<a class="editor-brand"[^>]*href=/);
