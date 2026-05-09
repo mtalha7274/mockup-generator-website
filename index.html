@@ -577,8 +577,8 @@ select.pi option { background: #2a2a2a; }
     <option value="2048x2732">iPad Pro</option>
   </select>
   <div class="tb-sep"></div>
-  <button class="tb-btn" id="btn-export" title="Export PNG">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5v8l2.5-2.5 1 1L8 11.5l-3.5-3.5 1-1L8 9.5v-8h1zM2 13.5h12v1.5H2v-1.5z"/></svg>Export PNG
+  <button class="tb-btn" id="btn-export" title="Export PNG or ZIP">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5v8l2.5-2.5 1 1L8 11.5l-3.5-3.5 1-1L8 9.5v-8h1zM2 13.5h12v1.5H2v-1.5z"/></svg>Export
   </button>
 </div>
 
@@ -1194,9 +1194,7 @@ function drawElVisual(div, el) {
         inner.addEventListener('dblclick', ev => {
           ev.preventDefault();
           ev.stopPropagation();
-          inner.contentEditable = 'true';
-          inner.focus();
-          selectAllText(inner);
+          startTextEditing(inner);
         });
         inner.addEventListener('blur', () => {
           inner.contentEditable = 'false';
@@ -1265,6 +1263,11 @@ function selectAllText(el) {
   const sel = window.getSelection();
   sel.removeAllRanges();
   sel.addRange(range);
+}
+function startTextEditing(inner) {
+  inner.contentEditable = 'true';
+  inner.focus();
+  selectAllText(inner);
 }
 function clearSvg(div) { div.querySelectorAll(':scope > svg').forEach(s => s.remove()); }
 function clearImg(div) {
@@ -1834,6 +1837,11 @@ function renderSelBox() {
   sb.style.width  = (x2-x1+6)+'px'; sb.style.height = (y2-y1+6)+'px';
 }
 
+function clearSelection() {
+  S.selIds = [];
+  renderAll();
+}
+
 // ═══════════════════════════════════════════════════════════
 // INTERACTION STATE
 // ═══════════════════════════════════════════════════════════
@@ -1857,13 +1865,15 @@ function setupWorkspace() {
 
   ws.addEventListener('pointerdown', e => {
     const canvasEl = e.target.closest('.canvas-container');
-    if (!canvasEl) return;
+    if (!canvasEl) {
+      if (!e.shiftKey && S.selIds.length) clearSelection();
+      return;
+    }
     
     const canvasId = canvasEl.dataset.canvasId;
     if (canvasId && canvasId !== S.activeId) {
       S.activeId = canvasId;
-      S.selIds = [];
-      renderAll();
+      clearSelection();
       return;
     }
     
@@ -1874,7 +1884,7 @@ function setupWorkspace() {
     if (S.tool !== 'select') {
       beginInsert(e);
     } else {
-      if (!e.shiftKey) { S.selIds = []; renderAll(); }
+      if (!e.shiftKey) clearSelection();
       beginRubber(e);
     }
   });
@@ -1924,7 +1934,16 @@ function beginRubber(e) {
 function bindElEvents(div) {
   div.addEventListener('dblclick', e => {
     const el = getEl(div.dataset.id);
-    if (!el || el.locked || el.type !== 'image') return;
+    if (!el || el.locked) return;
+    if (el.type === 'text') {
+      const inner = div.querySelector('.text-inner');
+      if (!inner) return;
+      e.preventDefault();
+      e.stopPropagation();
+      startTextEditing(inner);
+      return;
+    }
+    if (el.type !== 'image') return;
     e.preventDefault();
     e.stopPropagation();
     chooseImageForElement(el);
@@ -1933,6 +1952,7 @@ function bindElEvents(div) {
   div.addEventListener('pointerdown', e => {
     if (e.target.classList.contains('rh')) return;
     if (e.target.classList.contains('text-inner') && e.target.contentEditable === 'true') return;
+    if (e.target.classList.contains('text-inner') && e.detail > 1) return;
     const id = div.dataset.id;
     const el = getEl(id); if (!el || el.locked) return;
     e.stopPropagation();
@@ -2598,11 +2618,22 @@ async function exportPNG() {
   const canvases = [...S.canvases];
   if (!canvases.length) return;
 
+  if (canvases.length === 1) {
+    const canvas = await renderCanvasForExport(canvases[0]);
+    download(canvas, exportFileName(canvases[0], 0));
+    return;
+  }
+
+  const files = [];
   for (let i = 0; i < canvases.length; i++) {
     const canvas = await renderCanvasForExport(canvases[i]);
-    download(canvas, exportFileName(canvases[i], i));
+    files.push({
+      name: exportFileName(canvases[i], i) + '.png',
+      blob: await canvasToPngBlob(canvas)
+    });
     await delay(180);
   }
+  downloadBlob(await createZipBlob(files), exportArchiveName());
 }
 
 async function renderCanvasForExport(cv) {
@@ -2678,14 +2709,112 @@ function exportFileName(cv, index) {
   return `${order}-${name}`;
 }
 
+function exportArchiveName() {
+  return 'mockups.zip';
+}
+
 function download(canvas, name) {
+  downloadBlob(canvas.toDataURL('image/png'), (name || 'canvas') + '.png');
+}
+
+function downloadBlob(blobOrUrl, name) {
   const a = document.createElement('a');
-  a.download = (name || 'canvas') + '.png';
-  a.href = canvas.toDataURL('image/png');
+  const url = typeof blobOrUrl === 'string' ? blobOrUrl : URL.createObjectURL(blobOrUrl);
+  a.download = name || 'download';
+  a.href = url;
   document.body.appendChild(a);
   a.click();
   a.remove();
+  if (typeof blobOrUrl !== 'string') setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+function canvasToPngBlob(canvas) {
+  return new Promise(resolve => {
+    canvas.toBlob(blob => resolve(blob), 'image/png');
+  });
+}
+
+async function createZipBlob(files) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  for (const file of files) {
+    const nameBytes = encoder.encode(file.name);
+    const data = new Uint8Array(await file.blob.arrayBuffer());
+    const crc = crc32(data);
+    const localHeader = zipLocalHeader(nameBytes, data.length, crc);
+    localParts.push(localHeader, data);
+    centralParts.push(zipCentralHeader(nameBytes, data.length, crc, offset));
+    offset += localHeader.length + data.length;
+  }
+
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const end = zipEndRecord(files.length, centralSize, offset);
+  return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
+}
+
+function zipLocalHeader(nameBytes, size, crc) {
+  const header = new Uint8Array(30 + nameBytes.length);
+  const view = new DataView(header.buffer);
+  view.setUint32(0, 0x04034b50, true);
+  view.setUint16(4, 20, true);
+  view.setUint16(8, 0, true);
+  view.setUint32(14, crc, true);
+  view.setUint32(18, size, true);
+  view.setUint32(22, size, true);
+  view.setUint16(26, nameBytes.length, true);
+  header.set(nameBytes, 30);
+  return header;
+}
+
+function zipCentralHeader(nameBytes, size, crc, offset) {
+  const header = new Uint8Array(46 + nameBytes.length);
+  const view = new DataView(header.buffer);
+  view.setUint32(0, 0x02014b50, true);
+  view.setUint16(4, 20, true);
+  view.setUint16(6, 20, true);
+  view.setUint16(10, 0, true);
+  view.setUint32(16, crc, true);
+  view.setUint32(20, size, true);
+  view.setUint32(24, size, true);
+  view.setUint16(28, nameBytes.length, true);
+  view.setUint32(42, offset, true);
+  header.set(nameBytes, 46);
+  return header;
+}
+
+function zipEndRecord(fileCount, centralSize, centralOffset) {
+  const header = new Uint8Array(22);
+  const view = new DataView(header.buffer);
+  view.setUint32(0, 0x06054b50, true);
+  view.setUint16(8, fileCount, true);
+  view.setUint16(10, fileCount, true);
+  view.setUint32(12, centralSize, true);
+  view.setUint32(16, centralOffset, true);
+  return header;
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc = CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
 
 // ─ Canvas 2D drawing (used in thumbnails + fallback export) ─
 function drawElCtx(ctx, el, sc) {
