@@ -1215,7 +1215,7 @@ function renderOverflowForCanvas(targetCv, root, canvasId, opts = {}) {
   const prev = S.canvases[targetIndex - 1];
   if (prev) {
     prev.elements
-      .filter(el => el.x + el.width > prev.width)
+      .filter(el => elementVisualBounds(el).right > prev.width)
       .forEach(el => {
         renderOverflowGhost(el, root, canvasId, el.x - prev.width, el.y, 'from-prev', opts);
       });
@@ -1224,11 +1224,43 @@ function renderOverflowForCanvas(targetCv, root, canvasId, opts = {}) {
   const next = S.canvases[targetIndex + 1];
   if (next) {
     next.elements
-      .filter(el => el.x < 0)
+      .filter(el => elementVisualBounds(el).left < 0)
       .forEach(el => {
         renderOverflowGhost(el, root, canvasId, targetCv.width + el.x, el.y, 'from-next', opts);
       });
   }
+}
+
+function elementVisualBounds(el) {
+  const left = el.x;
+  const top = el.y;
+  const right = el.x + el.width;
+  const bottom = el.y + el.height;
+  if (!el.rotation) return { left, top, right, bottom };
+
+  const angle = el.rotation * Math.PI / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const cx = el.x + el.width / 2;
+  const cy = el.y + el.height / 2;
+  const halfW = el.width / 2;
+  const halfH = el.height / 2;
+  const corners = [
+    [-halfW, -halfH],
+    [ halfW, -halfH],
+    [ halfW,  halfH],
+    [-halfW,  halfH],
+  ].map(([x, y]) => ({
+    x: cx + x * cos - y * sin,
+    y: cy + x * sin + y * cos,
+  }));
+
+  return {
+    left: Math.min(...corners.map(p => p.x)),
+    top: Math.min(...corners.map(p => p.y)),
+    right: Math.max(...corners.map(p => p.x)),
+    bottom: Math.max(...corners.map(p => p.y)),
+  };
 }
 
 function renderOverflowGhost(sourceEl, root, canvasId, x, y, direction, opts = {}) {
@@ -2265,7 +2297,7 @@ function onPtrMove(e) {
 
   } else if (IX.mode === 'resize') {
     const el = cv.elements.find(x => x.id === IX.elId); if (!el) return;
-    applyResize(el, dx, dy, IX.handle, e.shiftKey);
+    applyResize(el, dx, dy, IX.handle, e.shiftKey || el.type === 'frame');
     const div = document.querySelector(`.el[data-id="${el.id}"]`);
     if (div) { div.style.left=el.x+'px'; div.style.top=el.y+'px'; div.style.width=el.width+'px'; div.style.height=el.height+'px'; drawElVisual(div,el); syncHandles(div,el); }
     renderOverflowMirrors();
@@ -2927,7 +2959,7 @@ async function renderCanvasForExport(cv) {
 
 function createExportContainer(cv) {
   const container = document.createElement('div');
-  container.className = 'canvas-container export-canvas';
+  container.className = 'export-canvas';
   container.style.position = 'fixed';
   container.style.left = '0';
   container.style.top = '0';
@@ -2938,7 +2970,8 @@ function createExportContainer(cv) {
   container.style.boxShadow = 'none';
   container.style.transform = 'none';
   container.style.pointerEvents = 'none';
-  container.style.zIndex = '-1';
+  container.style.contain = 'layout style paint';
+  container.style.zIndex = '2147483647';
   container.dataset.canvasId = `export-${cv.id}`;
   renderElementsForCanvas(cv, container, `export-${cv.id}`, { interactive: false, uiZoom: 1 });
   renderOverflowForCanvas(cv, container, `export-overflow-${cv.id}`, { uiZoom: 1 });

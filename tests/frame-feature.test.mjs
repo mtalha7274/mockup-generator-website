@@ -51,3 +51,18 @@ test('export fallback can draw frame elements', () => {
   assert.match(html, /case 'frame':/);
   assert.match(html, /drawFrameCtx/);
 });
+
+test('frame resizing preserves aspect ratio without requiring shift', () => {
+  assert.match(html, /applyResize\(el,\s*dx,\s*dy,\s*IX\.handle,\s*e\.shiftKey\s*\|\|\s*el\.type\s*===\s*'frame'\)/);
+});
+
+test('overflow mirrors use rotated visual bounds at canvas edges', () => {
+  assert.match(html, /function elementVisualBounds\(el\)/);
+  assert.match(html, /elementVisualBounds\(el\)\.right\s*>\s*prev\.width/);
+  assert.match(html, /elementVisualBounds\(el\)\.left\s*<\s*0/);
+});
+
+test('export rendering uses an isolated canvas surface without workspace shadows', () => {
+  assert.match(html, /container\.className\s*=\s*'export-canvas'/);
+  assert.match(html, /container\.style\.boxShadow\s*=\s*'none'/);
+});
