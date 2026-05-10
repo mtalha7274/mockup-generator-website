@@ -200,8 +200,12 @@
         @media (max-width: 900px) {
             .hero { padding: 72px 0 48px; }
 
-            /* ~7.5% larger hero title on narrow viewports */
-            h1 { font-size: clamp(2.6875rem, 6.45vw, 4.5rem); }
+            /* Hero headline: higher min + vw so phones aren’t stuck at the clamp floor */
+            h1 { font-size: clamp(3.15rem, 9.5vw, 4.5rem); }
+
+            .nav { height: 64px; }
+            .logo { font-size: 1.2rem; gap: 9px; }
+            .logo-box { width: 26px; height: 26px; border-radius: 7px; }
 
             /* Room for logo on one line; hero CTA still opens editor */
             .nav-content > .btn { display: none; }
@@ -258,6 +262,8 @@
         @media (max-width: 520px) {
             .hero { padding: 56px 0 36px; }
             .hero p { font-size: 1.05rem; }
+
+            h1 { font-size: clamp(3.28rem, 10.5vw, 4.5rem); }
 
             .scene {
                 height: 430px;
