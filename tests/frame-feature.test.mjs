@@ -65,6 +65,19 @@ test('top toolbar exposes iOS and Android frame insertion controls', () => {
   assert.match(html, /addFrameDirect\('android'\)/);
 });
 
+test('mobile toolbar scrolls and properties panel becomes a drawer', () => {
+  assert.match(html, /id="mobile-panel-toggle"[^>]*aria-controls="right-panel"[^>]*aria-expanded="false"/);
+  assert.match(html, /id="mobile-panel-backdrop"/);
+  assert.match(html, /id="mobile-panel-close"/);
+  assert.match(html, /const MOBILE_PANEL_QUERY\s*=\s*'\(max-width: 768px\)'/);
+  assert.match(html, /setupMobilePanel\(\)/);
+  assert.match(html, /function setMobilePanelOpen\(open\)/);
+  assert.match(html, /body\.classList\.toggle\('mobile-panel-open',\s*isOpen\)/);
+  assert.match(html, /@media \(max-width: 768px\)[\s\S]*#top-bar\s*\{[\s\S]*overflow-x:\s*auto;/);
+  assert.match(html, /@media \(max-width: 768px\)[\s\S]*#right-panel\s*\{[\s\S]*position:\s*fixed;[\s\S]*transform:\s*translateX\(100%\);[\s\S]*overflow-y:\s*auto;/);
+  assert.match(html, /body\.mobile-panel-open #right-panel\s*\{[\s\S]*transform:\s*translateX\(0\);/);
+});
+
 test('editor starts at 20% zoom and zoom steps move by four percentage points', () => {
   assert.match(html, /const DEFAULT_ZOOM\s*=\s*0\.2/);
   assert.match(html, /const ZOOM_STEP\s*=\s*0\.04/);

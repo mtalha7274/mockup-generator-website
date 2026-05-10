@@ -140,6 +140,10 @@ body {
 .tb-menu.hidden {
   display: none;
 }
+.tb-menu.mobile-fixed-menu {
+  position: fixed;
+  right: auto;
+}
 .tb-menu-item {
   width: 100%;
   height: 30px;
@@ -593,6 +597,37 @@ body.resizing-panel #panel-resizer::after {
   overflow-y: auto;
   overflow-x: hidden;
 }
+.mobile-panel-header,
+#mobile-panel-toggle,
+#mobile-panel-backdrop {
+  display: none;
+}
+.mobile-panel-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+}
+.mobile-panel-close-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.mobile-panel-close-btn:hover {
+  color: var(--text);
+  background: #273244;
+}
+.mobile-panel-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
 .ps { border-bottom: 1px solid var(--border); }
 .ps-head {
   padding: 8px 10px;
@@ -959,6 +994,103 @@ select.pi option { background: #2a2a2a; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+
+@media (max-width: 768px) {
+  #top-bar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  #top-bar > * {
+    flex: 0 0 auto;
+  }
+  #panel-resizer {
+    display: none;
+  }
+  #right-panel {
+    position: fixed;
+    top: 50px;
+    right: 0;
+    bottom: 0;
+    width: min(320px, calc(100vw - 48px)) !important;
+    max-width: 100vw;
+    z-index: 22000;
+    transform: translateX(100%);
+    transition: transform 0.18s ease;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    box-shadow: -16px 0 36px rgba(15,23,42,.28);
+  }
+  body.mobile-panel-open #right-panel {
+    transform: translateX(0);
+  }
+  .mobile-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    min-height: 42px;
+    padding: 7px 10px;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  #mobile-panel-toggle {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 21000;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid #d9e0ea;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #334155;
+    box-shadow: 0 8px 24px rgba(15,23,42,.22);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  #mobile-panel-toggle:hover {
+    background: #eef4ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+  }
+  #mobile-panel-toggle svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+  body.mobile-panel-open #mobile-panel-toggle {
+    display: none;
+  }
+  #mobile-panel-backdrop {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 21000;
+    display: block;
+    background: rgba(15,23,42,.32);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+  body.mobile-panel-open #mobile-panel-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
 </style>
 </head>
 <body class="editor-page">
@@ -1026,6 +1158,12 @@ select.pi option { background: #2a2a2a; }
     </div>
   </div>
 </div>
+
+<button type="button" id="mobile-panel-toggle" aria-controls="right-panel" aria-expanded="false" title="Open properties panel">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M3 3h10M3 8h10M3 13h10"/><path d="M5 3v10M11 3v10"/></svg>
+  <span>Properties</span>
+</button>
+<div id="mobile-panel-backdrop" aria-hidden="true"></div>
 
 <div id="export-status" class="hidden" role="status" aria-live="polite" aria-atomic="true">
   <div class="export-spinner"></div>
@@ -1121,6 +1259,12 @@ select.pi option { background: #2a2a2a; }
   <!-- RIGHT PANEL -->
   <div id="panel-resizer" title="Resize properties panel"></div>
   <div id="right-panel">
+    <div class="mobile-panel-header">
+      <div class="mobile-panel-title">Properties</div>
+      <button type="button" class="mobile-panel-close-btn" id="mobile-panel-close" aria-label="Close properties panel">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
     <div id="panel-inner"></div>
   </div>
 
@@ -1213,6 +1357,7 @@ const getEl    = id => { const cv = activeCV(); return cv ? cv.elements.find(e =
 const PROJECT_FILE_VERSION = 1;
 const AUTOSAVE_STORAGE_KEY = 'mockup-generator-autosave';
 const PATREON_SUPPORT_URL = 'https://www.patreon.com/posts/one-developer-no-157857073?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link';
+const MOBILE_PANEL_QUERY = '(max-width: 768px)';
 
 // ═══════════════════════════════════════════════════════════
 // HISTORY
@@ -1389,6 +1534,7 @@ function init() {
   setupToolbar();
   setupCanvasChrome();
   setupPanelResize();
+  setupMobilePanel();
   setupLeaveGuard();
   setupVisibilityReturnPromptGuard();
 }
@@ -3280,6 +3426,9 @@ function setupToolbar() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') hideToolbarMenus();
   });
+  const topBar = document.getElementById('top-bar');
+  if (topBar) topBar.addEventListener('scroll', positionOpenToolbarMenus, { passive: true });
+  window.addEventListener('resize', positionOpenToolbarMenus);
 }
 
 function toggleImportMenu(e) {
@@ -3290,12 +3439,15 @@ function toggleImportMenu(e) {
   hideExportMenu();
   const isOpen = menu.classList.toggle('hidden') === false;
   btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  if (isOpen) positionToolbarMenu(menu, btn);
+  else resetToolbarMenuPosition(menu);
 }
 
 function hideImportMenu() {
   const menu = document.getElementById('import-menu');
   const btn = document.getElementById('btn-project-import');
   if (menu) menu.classList.add('hidden');
+  resetToolbarMenuPosition(menu);
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
@@ -3307,13 +3459,61 @@ function toggleExportMenu(e) {
   hideImportMenu();
   const isOpen = menu.classList.toggle('hidden') === false;
   btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  if (isOpen) positionToolbarMenu(menu, btn);
+  else resetToolbarMenuPosition(menu);
 }
 
 function hideExportMenu() {
   const menu = document.getElementById('export-menu');
   const btn = document.getElementById('btn-export');
   if (menu) menu.classList.add('hidden');
+  resetToolbarMenuPosition(menu);
   if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function isMobileViewport() {
+  return window.matchMedia(MOBILE_PANEL_QUERY).matches;
+}
+
+function resetToolbarMenuPosition(menu) {
+  if (!menu) return;
+  menu.classList.remove('mobile-fixed-menu');
+  menu.style.left = '';
+  menu.style.top = '';
+  menu.style.right = '';
+}
+
+function positionToolbarMenu(menu, btn) {
+  if (!menu || !btn) return;
+  if (!isMobileViewport()) {
+    resetToolbarMenuPosition(menu);
+    return;
+  }
+
+  menu.classList.add('mobile-fixed-menu');
+  menu.style.right = 'auto';
+
+  const margin = 8;
+  const rect = btn.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  const menuWidth = Math.max(menuRect.width || menu.offsetWidth || 150, 150);
+  const menuHeight = Math.max(menuRect.height || menu.offsetHeight || 70, 70);
+  const maxLeft = Math.max(margin, window.innerWidth - menuWidth - margin);
+  const preferredLeft = rect.right - menuWidth;
+  const left = Math.min(maxLeft, Math.max(margin, preferredLeft));
+  const top = Math.max(56, Math.min(rect.bottom + 6, window.innerHeight - menuHeight - margin));
+
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+}
+
+function positionOpenToolbarMenus() {
+  const importMenu = document.getElementById('import-menu');
+  const importBtn = document.getElementById('btn-project-import');
+  const exportMenu = document.getElementById('export-menu');
+  const exportBtn = document.getElementById('btn-export');
+  if (importMenu && !importMenu.classList.contains('hidden')) positionToolbarMenu(importMenu, importBtn);
+  if (exportMenu && !exportMenu.classList.contains('hidden')) positionToolbarMenu(exportMenu, exportBtn);
 }
 
 async function runExportMenuAction(action) {
@@ -3524,6 +3724,50 @@ function setupPanelResize() {
     document.addEventListener('pointerup', onUp);
     e.preventDefault();
   });
+}
+
+function setupMobilePanel() {
+  const toggle = document.getElementById('mobile-panel-toggle');
+  const close = document.getElementById('mobile-panel-close');
+  const backdrop = document.getElementById('mobile-panel-backdrop');
+  if (!toggle || !close || !backdrop) return;
+
+  const media = window.matchMedia(MOBILE_PANEL_QUERY);
+  const syncForViewport = () => {
+    if (!media.matches) setMobilePanelOpen(false);
+  };
+
+  toggle.addEventListener('click', () => {
+    setMobilePanelOpen(!document.body.classList.contains('mobile-panel-open'));
+  });
+  close.addEventListener('click', () => setMobilePanelOpen(false));
+  backdrop.addEventListener('click', () => setMobilePanelOpen(false));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') setMobilePanelOpen(false);
+  });
+
+  if (media.addEventListener) media.addEventListener('change', syncForViewport);
+  else media.addListener(syncForViewport);
+  setMobilePanelOpen(false);
+  syncForViewport();
+}
+
+function setMobilePanelOpen(open) {
+  const toggle = document.getElementById('mobile-panel-toggle');
+  const close = document.getElementById('mobile-panel-close');
+  const backdrop = document.getElementById('mobile-panel-backdrop');
+  const isOpen = Boolean(open) && isMobileViewport();
+
+  document.body.classList.toggle('mobile-panel-open', isOpen);
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    toggle.title = isOpen ? 'Close properties panel' : 'Open properties panel';
+  }
+  if (backdrop) backdrop.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  if (isOpen) {
+    hideToolbarMenus();
+    if (close) close.focus({ preventScroll: true });
+  }
 }
 
 function setTool(tool) {
