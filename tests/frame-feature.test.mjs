@@ -17,9 +17,20 @@ test('landing page does not initialize the editor app', () => {
   assert.doesNotMatch(landingHtml, /const S = \{/);
 });
 
-test('editor does not register a native beforeunload dialog', () => {
-  assert.doesNotMatch(html, /beforeunload/);
-  assert.doesNotMatch(html, /event\.returnValue\s*=/);
+test('editor registers a native beforeunload dialog', () => {
+  assert.match(html, /function setupLeaveGuard\(\)/);
+  assert.match(html, /window\.addEventListener\('beforeunload',\s*event => \{/);
+  assert.match(html, /event\.preventDefault\(\)/);
+  assert.match(html, /event\.returnValue\s*=\s*''/);
+  assert.match(html, /setupLeaveGuard\(\)/);
+});
+
+test('editor suppresses Chrome reload prompt on visibility return', () => {
+  assert.match(html, /function setupVisibilityReturnPromptGuard\(\)/);
+  assert.match(html, /document\.addEventListener\('visibilitychange',\s*event => \{/);
+  assert.match(html, /document\.visibilityState === 'visible'/);
+  assert.match(html, /event\.preventDefault\(\)/);
+  assert.match(html, /setupVisibilityReturnPromptGuard\(\)/);
 });
 
 test('editor autosaves and restores projects after browser refresh', () => {
@@ -185,9 +196,26 @@ test('export shows progress without flashing the capture surface onscreen', () =
 
 test('project files can be imported from the toolbar', () => {
   assert.match(html, /id="btn-project-import"/);
+  assert.match(html, /id="btn-project-import"[\s\S]*>Import\s*<\/button>/);
+  assert.match(html, /id="import-menu"/);
+  assert.match(html, /id="new-project-option"[\s\S]*<svg viewBox="0 0 16 16"[\s\S]*New project/);
+  assert.match(html, /id="import-project-option"[\s\S]*<svg viewBox="0 0 16 16"[\s\S]*Import project/);
   assert.match(html, /id="project-import-input"/);
   assert.match(html, /accept="\.mockup,application\/json"/);
-  assert.match(html, /addEventListener\('click', \(\) => projectImportInput\.click\(\)\)/);
+  assert.match(html, /btn-project-import'\)\.addEventListener\('click',\s*toggleImportMenu\)/);
+  assert.match(html, /new-project-option'\)\.addEventListener\('click',\s*\(\) => runImportMenuAction\(confirmNewProject\)\)/);
+  assert.match(html, /import-project-option'\)\.addEventListener\('click',\s*\(\) => runImportMenuAction\(confirmProjectImport\)\)/);
+  assert.match(html, /async function confirmProjectImport\(\)[\s\S]*project-import-input'\)\.click\(\)/);
+});
+
+test('destructive project and canvas actions use the centered modal', () => {
+  assert.match(html, /id="confirm-modal"/);
+  assert.match(html, /function showConfirmModal\(options = \{\}\)/);
+  assert.match(html, /async function confirmNewProject\(\)[\s\S]*resetToStarterProject\(\)/);
+  assert.match(html, /function resetToStarterProject\(\)[\s\S]*const cv = starterCanvasTemplate\(\)/);
+  assert.match(html, /function deleteCanvasWithConfirm\(id\)[\s\S]*showConfirmModal\(/);
+  assert.doesNotMatch(html, /window\.confirm/);
+  assert.doesNotMatch(html, /window\.alert/);
 });
 
 test('top toolbar keeps canvas sizing and presets out of the main bar', () => {
