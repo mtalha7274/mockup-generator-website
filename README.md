@@ -37,8 +37,10 @@ This project is a static vanilla HTML/CSS/JS mockup generator website. There is 
 - `New project` shows a centered confirmation popup, then replaces the current work with the starter project.
 - `Import project` shows a centered confirmation popup, then imports a `.mockup` project file and restores the editor close to where the user left it.
 - `Export` opens a menu with `Project` and `Mockups`.
-- `Project` downloads a `.mockup` file for later import.
-- `Mockups` exports the canvas images as PNG files, or `mockups.zip` when there is more than one canvas.
+- Choosing `Project` or `Mockups` first shows the optional Patreon support popup with the short message "One developer keeps this free. If it saved you time, consider supporting."
+- The support popup uses a prominent `Support on Patreon` button, plus a small gray `Continue without supporting` text-style button below it.
+- `Project` then downloads a `.mockup` file for later import.
+- `Mockups` then exports the canvas images as PNG files, or `mockups.zip` when there is more than one canvas.
 - The top bar intentionally does not include canvas dimension fields or preset controls; use the canvas section in the right panel for dimensions.
 
 ## Device Frame Notes
@@ -75,5 +77,6 @@ git diff --check
 - If changing zoom or multi-canvas layout, check both `createCanvasShell()` and `fitCanvas()`.
 - If changing top canvas buttons, update `createCanvasChrome()` and the related CSS near `CANVAS TOP CHROME`.
 - If changing device-frame geometry, update the frame tests and visually verify the notch/punch-hole alignment with a real screenshot.
-- If changing project import/export, verify both `.mockup` round-tripping and PNG/mockups export.
+- If changing project import/export, verify both `.mockup` round-tripping and PNG/mockups export, including the optional Patreon support prompt shown before exports.
+- Keep the export support prompt optional and visually honest: the Patreon action should be primary, while `Continue without supporting` stays available as a de-emphasized text-style control.
 - After visual edits, verify delete/duplicate canvas, element drag/resize, zoom, frame upload/drop, project import/export, and mockup export still work.

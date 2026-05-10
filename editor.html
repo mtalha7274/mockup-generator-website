@@ -6,6 +6,7 @@
 <title>Mockup Studio Editor</title>
 <style>
 :root {
+  --brand-gradient: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
   --bg-sidebar: #151922;
   --bg-toolbar: #ffffff;
   --bg-panel-row: #202633;
@@ -49,8 +50,8 @@ body {
   box-shadow: 0 1px 12px rgba(15,23,42,.08);
 }
 .editor-brand {
-  height: 32px;
-  padding: 0 11px 0 8px;
+  min-height: 32px;
+  padding: 5px 11px 5px 8px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -65,19 +66,12 @@ body {
 }
 .editor-brand:hover { background: #eaf1ff; border-color: #bfdbfe; }
 .editor-brand-mark {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
   border-radius: 6px;
-  display: grid;
-  place-items: center;
-  background: #111827;
-}
-.editor-brand-mark::before {
-  content: '';
-  width: 8px;
-  height: 12px;
-  border: 1.5px solid #fff;
-  border-radius: 3px;
+  background: var(--brand-gradient);
+  rotate: -10deg;
 }
 .tb-sep { width: 1px; height: 24px; background: #dde3ec; margin: 0 3px; flex-shrink: 0; }
 .tb-label { font-size: 11px; color: #64748b; white-space: nowrap; font-weight: 700; }
@@ -872,6 +866,92 @@ select.pi option { background: #2a2a2a; }
   border-color: #b91c1c;
   color: #fff;
 }
+.support-modal {
+  width: min(500px, 100%);
+  padding: 24px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d9e0ea;
+  color: #111827;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, .3);
+}
+.support-graphic {
+  height: 104px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.support-graphic svg {
+  width: min(300px, 92%);
+  height: 88px;
+}
+.support-kicker {
+  margin-bottom: 7px;
+  color: #e11d48;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.support-modal h2 {
+  margin-bottom: 9px;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+.support-modal p {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.55;
+  user-select: text;
+}
+.support-message {
+  margin-bottom: 20px;
+}
+.support-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.support-cta {
+  min-height: 44px;
+}
+.support-cta {
+  min-width: min(100%, 280px);
+  padding: 0 20px;
+  background: #e11d48;
+  border-color: #e11d48;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+}
+.support-cta:hover {
+  background: #be123c;
+  border-color: #be123c;
+  color: #fff;
+}
+.support-skip-link {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.35;
+  text-decoration: none;
+  padding: 0;
+}
+.support-skip-link:hover,
+.support-skip-link:focus {
+  color: #334155;
+  text-decoration: underline;
+  outline: none;
+}
 
 /* ── SCROLLBARS ────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -958,6 +1038,33 @@ select.pi option { background: #2a2a2a; }
     <div class="modal-actions">
       <button type="button" class="modal-btn" id="confirm-modal-cancel">Cancel</button>
       <button type="button" class="modal-btn primary" id="confirm-modal-confirm">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div id="export-support-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="export-support-title" aria-describedby="export-support-message">
+  <div class="support-modal" tabindex="-1">
+    <div class="support-graphic" aria-hidden="true">
+      <svg viewBox="0 0 300 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="24" y="14" width="94" height="60" rx="9" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+        <rect x="36" y="26" width="70" height="36" rx="5" fill="#dbeafe"/>
+        <circle cx="50" cy="38" r="6" fill="#2563eb"/>
+        <path d="M40 58l17-16 13 12 11-10 20 14" stroke="#1d4ed8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M130 44h56" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+        <path d="M174 31l15 13-15 13" stroke="#94a3b8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="198" y="22" width="78" height="44" rx="10" fill="#111827"/>
+        <text x="237" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#ffffff">PNG</text>
+        <path d="M214 71h46" stroke="#e11d48" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="support-kicker">Before your export</div>
+    <h2 id="export-support-title">Help keep Mockup Generator free</h2>
+    <p id="export-support-message" class="support-message">One developer keeps this free. If it saved you time, consider supporting.</p>
+    <div class="support-actions">
+      <button type="button" class="modal-btn support-cta" id="export-support-patreon">
+        <span>Support on Patreon</span>
+      </button>
+      <button type="button" class="support-skip-link" id="export-support-skip">Continue without supporting</button>
     </div>
   </div>
 </div>
@@ -1104,6 +1211,7 @@ const activeCV = () => S.canvases.find(c => c.id === S.activeId) || S.canvases[0
 const getEl    = id => { const cv = activeCV(); return cv ? cv.elements.find(e => e.id === id) : null; };
 const PROJECT_FILE_VERSION = 1;
 const AUTOSAVE_STORAGE_KEY = 'mockup-generator-autosave';
+const PATREON_SUPPORT_URL = 'https://www.patreon.com/posts/one-developer-no-157857073?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link';
 
 // ═══════════════════════════════════════════════════════════
 // HISTORY
@@ -3207,8 +3315,9 @@ function hideExportMenu() {
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
-function runExportMenuAction(action) {
+async function runExportMenuAction(action) {
   hideExportMenu();
+  await showExportSupportModal();
   action();
 }
 
@@ -3220,6 +3329,42 @@ function hideToolbarMenus() {
 function runImportMenuAction(action) {
   hideImportMenu();
   action();
+}
+
+function showExportSupportModal() {
+  const overlay = document.getElementById('export-support-modal');
+  const modal = overlay ? overlay.querySelector('.support-modal') : null;
+  const skip = document.getElementById('export-support-skip');
+  const patreon = document.getElementById('export-support-patreon');
+  if (!overlay || !modal || !skip || !patreon) return Promise.resolve();
+
+  hideToolbarMenus();
+  overlay.classList.remove('hidden');
+  modal.focus();
+
+  return new Promise(resolve => {
+    let done = false;
+    const cleanup = () => {
+      if (done) return;
+      done = true;
+      overlay.classList.add('hidden');
+      skip.removeEventListener('click', onSkip);
+      patreon.removeEventListener('click', onSupport);
+      document.removeEventListener('keydown', onKeyDown);
+      resolve();
+    };
+    const onSkip = () => cleanup();
+    const onSupport = () => {
+      window.open(PATREON_SUPPORT_URL, '_blank', 'noopener');
+      cleanup();
+    };
+    const onKeyDown = e => {
+      if (e.key === 'Escape') cleanup();
+    };
+    skip.addEventListener('click', onSkip);
+    patreon.addEventListener('click', onSupport);
+    document.addEventListener('keydown', onKeyDown);
+  });
 }
 
 async function confirmNewProject() {

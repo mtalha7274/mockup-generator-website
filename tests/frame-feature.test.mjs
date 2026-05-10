@@ -239,6 +239,24 @@ test('export button opens a menu for project or mockup exports', () => {
   assert.match(html, /export-mockups-option'\)\.addEventListener\('click', \(\) => runExportMenuAction\(exportPNG\)\)/);
 });
 
+test('export actions show the Patreon support prompt first', () => {
+  assert.match(html, /const PATREON_SUPPORT_URL\s*=\s*'https:\/\/www\.patreon\.com\/posts\/one-developer-no-157857073\?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link'/);
+  assert.match(html, /id="export-support-modal"/);
+  assert.match(html, /One developer keeps this free\. If it saved you time, consider supporting\./);
+  assert.match(html, /Continue without supporting/);
+  assert.match(html, /<span>Support on Patreon<\/span>/);
+  assert.match(html, /<text[^>]*>PNG<\/text>/);
+  assert.match(html, /id="export-support-patreon"[\s\S]*<span>Support on Patreon<\/span>/);
+  assert.doesNotMatch(html, /\.support-cta svg\s*\{/);
+  assert.match(html, /\.support-cta\s*\{[\s\S]*min-height:\s*44px;[\s\S]*min-width:\s*min\(100%, 280px\);/);
+  assert.match(html, /class="support-skip-link" id="export-support-skip">Continue without supporting<\/button>/);
+  assert.doesNotMatch(html, /class="modal-btn support-skip"/);
+  assert.match(html, /modal\.focus\(\)/);
+  assert.match(html, /async function runExportMenuAction\(action\)\s*\{\s*hideExportMenu\(\);\s*await showExportSupportModal\(\);\s*action\(\);/s);
+  assert.match(html, /function showExportSupportModal\(\)/);
+  assert.match(html, /window\.open\(PATREON_SUPPORT_URL,\s*'_blank',\s*'noopener'\)/);
+});
+
 test('project export writes a versioned mockup state file', () => {
   assert.match(html, /const PROJECT_FILE_VERSION\s*=\s*1/);
   assert.match(html, /function buildProjectPayload\(\)/);
