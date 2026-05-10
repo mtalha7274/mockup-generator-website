@@ -198,8 +198,88 @@
         }
 
         @media (max-width: 900px) {
-            .card-1, .card-2, .icon-1 { display: none; }
-            .scene { height: auto; padding: 40px 0; }
+            .hero { padding: 72px 0 48px; }
+
+            .scene {
+                width: min(100%, 560px);
+                height: 500px;
+                margin: 56px auto 0;
+                padding: 0;
+            }
+
+            .device-main {
+                width: min(56vw, 220px);
+                height: auto;
+                aspect-ratio: 1 / 2;
+                border-width: clamp(8px, 2vw, 12px);
+                border-radius: clamp(34px, 8vw, 44px);
+            }
+
+            .screen-content {
+                padding: 16px;
+                gap: 12px;
+            }
+
+            .floating-card {
+                padding: 12px;
+                border-radius: 16px;
+            }
+
+            .card-1 {
+                display: block;
+                top: 7%;
+                right: 2%;
+                width: min(43vw, 180px);
+            }
+
+            .card-2 {
+                display: block;
+                bottom: 7%;
+                left: 2%;
+                width: min(48vw, 200px);
+            }
+
+            .icon-1 {
+                display: grid;
+                top: 35%;
+                left: 6%;
+                width: 44px;
+                height: 44px;
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .hero { padding: 56px 0 36px; }
+            .hero p { font-size: 1.05rem; }
+
+            .scene {
+                height: 430px;
+                margin-top: 48px;
+            }
+
+            .device-main { width: min(58vw, 190px); }
+
+            .floating-card { padding: 10px; }
+
+            .card-1 {
+                top: 1%;
+                right: 0;
+                width: min(48vw, 160px);
+            }
+
+            .card-2 {
+                bottom: 4%;
+                left: 0;
+                width: min(54vw, 176px);
+            }
+
+            .icon-1 {
+                top: 33%;
+                left: 1%;
+                width: 40px;
+                height: 40px;
+            }
         }
     </style>
 </head>
