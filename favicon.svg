@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="brand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" fill="none"/>
+  <g transform="translate(16 16) rotate(-10) translate(-16 -16)">
+    <rect x="4" y="4" width="24" height="24" rx="6" fill="url(#brand)"/>
+  </g>
+</svg>
