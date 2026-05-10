@@ -78,6 +78,21 @@ test('mobile toolbar scrolls and properties panel becomes a drawer', () => {
   assert.match(html, /body\.mobile-panel-open #right-panel\s*\{[\s\S]*transform:\s*translateX\(0\);/);
 });
 
+test('mobile editor gestures use touch-safe controls and a single active pointer', () => {
+  assert.match(html, /\.el\s*\{[\s\S]*touch-action:\s*none;/);
+  assert.match(html, /\.el\.text-editing\s*\{\s*touch-action:\s*auto;\s*\}/);
+  assert.match(html, /\.el \.text-inner\[contenteditable="true"\]\s*\{[\s\S]*touch-action:\s*manipulation;/);
+  assert.match(html, /\.rh\s*\{[\s\S]*touch-action:\s*none;/);
+  assert.match(html, /@media \(pointer: coarse\)\s*\{[\s\S]*\.rh::before\s*\{[\s\S]*--ui-touch-target,\s*44px/);
+  assert.match(html, /pointerId:\s*null/);
+  assert.match(html, /IX\.pointerId = e\.pointerId/);
+  assert.match(html, /function isActiveInteractionPointer\(e\)/);
+  assert.match(html, /if \(!isActiveInteractionPointer\(e\)\) return;/);
+  assert.match(html, /document\.addEventListener\('pointercancel',\s*onPtrCancel\)/);
+  assert.match(html, /function onPtrCancel\(e\)/);
+  assert.match(html, /function clearInteractionState\(\)/);
+});
+
 test('editor starts at 20% zoom and zoom steps move by four percentage points', () => {
   assert.match(html, /const DEFAULT_ZOOM\s*=\s*0\.2/);
   assert.match(html, /const ZOOM_STEP\s*=\s*0\.04/);

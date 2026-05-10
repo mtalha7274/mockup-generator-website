@@ -299,7 +299,9 @@ body {
   position: absolute;
   cursor: move;
   transform-origin: center center;
+  touch-action: none;
 }
+.el.text-editing { touch-action: auto; }
 .el.locked { cursor: default; }
 .el.overflow-ghost {
   pointer-events: none;
@@ -318,6 +320,8 @@ body {
 .el .text-inner[contenteditable="true"] {
   cursor: text;
   user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
 }
 .el img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .image-clip {
@@ -352,6 +356,7 @@ body {
   border-radius: 50%;
   z-index: 10000;
   box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  touch-action: none;
 }
 .rh-nw { top: calc(-1 * var(--ui-handle-out, 6px)); left: calc(-1 * var(--ui-handle-out, 6px)); cursor: nw-resize; }
 .rh-n  { top: calc(-1 * var(--ui-handle-out, 6px)); left: calc(50% - var(--ui-handle-half, 5px)); cursor: n-resize; }
@@ -378,6 +383,19 @@ body {
   color: #fff;
   line-height: 1;
   box-shadow: 0 2px 8px rgba(0,0,0,.28);
+}
+@media (pointer: coarse) {
+  .rh::before {
+    content: '';
+    position: absolute;
+    inset: calc((var(--ui-touch-target, 44px) - var(--ui-handle-size, 10px)) / -2);
+    border-radius: 50%;
+    background: rgba(255,255,255,0);
+    pointer-events: auto;
+  }
+  .rh-rot::before {
+    inset: calc((var(--ui-touch-target, 44px) - var(--ui-rot-size, 22px)) / -2);
+  }
 }
 .el-mini-toolbar {
   position: absolute;
@@ -1999,6 +2017,7 @@ function drawElVisual(div, el) {
         });
         inner.addEventListener('blur', () => {
           inner.contentEditable = 'false';
+          div.classList.remove('text-editing');
           snap();
         });
         inner.addEventListener('keydown', ev => {
@@ -2117,6 +2136,8 @@ function selectAllText(el) {
 }
 function startTextEditing(inner) {
   inner.contentEditable = 'true';
+  const elDiv = inner.closest('.el');
+  if (elDiv) elDiv.classList.add('text-editing');
   inner.focus();
   selectAllText(inner);
 }
@@ -2833,6 +2854,7 @@ function clearSelection() {
 // ═══════════════════════════════════════════════════════════
 const IX = {
   mode: null, // 'drag' | 'resize' | 'rotate' | 'rubber' | 'insert'
+  pointerId: null,
   sx: 0, sy: 0,           // pointer start (client)
   ox: 0, oy: 0,           // original position / rubber-start
   ow: 0, oh: 0,           // original w/h
@@ -2843,6 +2865,24 @@ const IX = {
   insertEl: null,
 };
 
+function isActiveInteractionPointer(e) {
+  return IX.pointerId === null || e.pointerId === IX.pointerId;
+}
+
+function clearInteractionState() {
+  IX.mode = null;
+  IX.pointerId = null;
+  IX.handle = null;
+  IX.elId = null;
+  IX.origPositions = [];
+  IX.insertEl = null;
+}
+
+function captureInteractionPointer(target, pointerId) {
+  if (!target || typeof target.setPointerCapture !== 'function') return;
+  try { target.setPointerCapture(pointerId); } catch (err) {}
+}
+
 // ═══════════════════════════════════════════════════════════
 // WORKSPACE INTERACTIONS
 // ═══════════════════════════════════════════════════════════
@@ -2850,6 +2890,7 @@ function setupWorkspace() {
   const ws = document.getElementById('workspace');
 
   ws.addEventListener('pointerdown', e => {
+    if (IX.mode) return;
     const canvasEl = e.target.closest('.canvas-container');
     if (!canvasEl) {
       if (!e.shiftKey && S.selIds.length) clearSelection();
@@ -2883,6 +2924,7 @@ function setupWorkspace() {
 
   document.addEventListener('pointermove', onPtrMove);
   document.addEventListener('pointerup',   onPtrUp);
+  document.addEventListener('pointercancel', onPtrCancel);
 }
 
 function beginInsert(e) {
@@ -2900,14 +2942,15 @@ function beginInsert(e) {
   S.selIds = [el.id];
   renderEl(el); renderSelBox();
 
-  IX.mode = 'insert'; IX.sx = e.clientX; IX.sy = e.clientY;
+  IX.mode = 'insert'; IX.pointerId = e.pointerId; IX.sx = e.clientX; IX.sy = e.clientY;
   IX.ox = pos.x; IX.oy = pos.y; IX.insertEl = el;
   e.preventDefault();
+  captureInteractionPointer(e.target, e.pointerId);
 }
 
 function beginRubber(e) {
   const pos = cvCoords(e);
-  IX.mode = 'rubber'; IX.sx = e.clientX; IX.sy = e.clientY;
+  IX.mode = 'rubber'; IX.pointerId = e.pointerId; IX.sx = e.clientX; IX.sy = e.clientY;
   IX.ox = pos.x; IX.oy = pos.y;
   const rb = document.getElementById('rubber-band') || document.querySelector('[id^="rubber-band"]');
   if (rb) {
@@ -2915,6 +2958,7 @@ function beginRubber(e) {
     rb.style.left = pos.x+'px'; rb.style.top = pos.y+'px';
     rb.style.width = '0'; rb.style.height = '0';
   }
+  captureInteractionPointer(e.target, e.pointerId);
 }
 
 function bindElEvents(div) {
@@ -2942,6 +2986,7 @@ function bindElEvents(div) {
   });
 
   div.addEventListener('pointerdown', e => {
+    if (IX.mode) return;
     if (e.target.classList.contains('rh')) return;
     if (e.target.classList.contains('text-inner') && e.target.contentEditable === 'true') return;
     if (e.target.classList.contains('text-inner') && e.detail > 1) return;
@@ -2953,7 +2998,7 @@ function bindElEvents(div) {
     }
     // Begin drag — reset any lingering snap/guide state first
     resetSnap();
-    IX.mode = 'drag'; IX.elId = id;
+    IX.mode = 'drag'; IX.pointerId = e.pointerId; IX.elId = id;
     IX.sx = e.clientX; IX.sy = e.clientY;
     const cv = activeCV();
     IX.origPositions = S.selIds.map(sid => {
@@ -2961,24 +3006,27 @@ function bindElEvents(div) {
       return sel && !sel.locked ? { id: sid, x: sel.x, y: sel.y } : null;
     }).filter(Boolean);
     e.preventDefault();
-    div.setPointerCapture(e.pointerId);
+    captureInteractionPointer(div, e.pointerId);
   });
 
   div.addEventListener('pointerdown', e => {
+    if (IX.mode) return;
     if (!e.target.classList.contains('rh')) return;
     e.stopPropagation();
     const id = div.dataset.id; const el = getEl(id); if (!el) return;
     IX.mode = e.target.dataset.h === 'rot' ? 'rotate' : 'resize';
+    IX.pointerId = e.pointerId;
     IX.elId = id; IX.handle = e.target.dataset.h;
     IX.sx = e.clientX; IX.sy = e.clientY;
     IX.ox = el.x; IX.oy = el.y; IX.ow = el.width; IX.oh = el.height; IX.orot = el.rotation;
     e.preventDefault();
-    div.setPointerCapture(e.pointerId);
+    captureInteractionPointer(div, e.pointerId);
   });
 }
 
 function onPtrMove(e) {
   if (!IX.mode) return;
+  if (!isActiveInteractionPointer(e)) return;
   const cv = activeCV(); if (!cv) return;
   const dx = (e.clientX - IX.sx) / S.zoom;
   const dy = (e.clientY - IX.sy) / S.zoom;
@@ -3038,8 +3086,21 @@ function onPtrMove(e) {
   }
 }
 
+function finishDragInteraction() {
+  // Schedule guide persistence then fade-out
+  if (SS.snappedX) { SS.snappedX = false; SS.snapEdgeFnX = null; scheduleGuideHide('x'); }
+  if (SS.snappedY) { SS.snappedY = false; SS.snapEdgeFnY = null; scheduleGuideHide('y'); }
+  SS.lerpOffX = 0; SS.lerpOffY = 0; SS.targetOffX = 0; SS.targetOffY = 0;
+  snap(); renderPanel(); updateCanvasChrome();
+}
+
+function finishTransformInteraction() {
+  snap(); renderPanel(); updateCanvasChrome();
+}
+
 function onPtrUp(e) {
   if (!IX.mode) return;
+  if (!isActiveInteractionPointer(e)) return;
   if (IX.mode === 'rubber') {
     const rb = document.getElementById('rubber-band') || document.querySelector('[id^="rubber-band"]');
     if (rb) rb.style.display = 'none';
@@ -3072,15 +3133,34 @@ function onPtrUp(e) {
     setTool('select');
     renderAll(); snap();
   } else if (IX.mode === 'drag') {
-    // Schedule guide persistence then fade-out
-    if (SS.snappedX) { SS.snappedX = false; SS.snapEdgeFnX = null; scheduleGuideHide('x'); }
-    if (SS.snappedY) { SS.snappedY = false; SS.snapEdgeFnY = null; scheduleGuideHide('y'); }
-    SS.lerpOffX = 0; SS.lerpOffY = 0; SS.targetOffX = 0; SS.targetOffY = 0;
-    snap(); renderPanel(); updateCanvasChrome();
+    finishDragInteraction();
   } else if (IX.mode === 'resize' || IX.mode === 'rotate') {
-    snap(); renderPanel(); updateCanvasChrome();
+    finishTransformInteraction();
   }
-  IX.mode = null; IX.insertEl = null;
+  clearInteractionState();
+}
+
+function onPtrCancel(e) {
+  if (!IX.mode) return;
+  if (!isActiveInteractionPointer(e)) return;
+  if (IX.mode === 'rubber') {
+    const rb = document.getElementById('rubber-band') || document.querySelector('[id^="rubber-band"]');
+    if (rb) rb.style.display = 'none';
+  } else if (IX.mode === 'insert') {
+    const cv = activeCV();
+    if (cv && IX.insertEl) {
+      cv.elements = cv.elements.filter(el => el.id !== IX.insertEl.id);
+      S.selIds = S.selIds.filter(id => id !== IX.insertEl.id);
+    }
+    killGuides();
+    setTool('select');
+    renderAll();
+  } else if (IX.mode === 'drag') {
+    finishDragInteraction();
+  } else if (IX.mode === 'resize' || IX.mode === 'rotate') {
+    finishTransformInteraction();
+  }
+  clearInteractionState();
 }
 
 function applyResize(el, dx, dy, handle, shift) {
