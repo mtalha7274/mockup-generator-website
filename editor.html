@@ -125,7 +125,8 @@ body {
   cursor: pointer;
 }
 .tb-select option { background: #333; }
-.export-menu-wrap {
+.export-menu-wrap,
+.import-menu-wrap {
   position: relative;
   display: inline-flex;
 }
@@ -794,6 +795,84 @@ select.pi option { background: #2a2a2a; }
   to { transform: rotate(360deg); }
 }
 
+/* ── CENTER MODAL ──────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, .42);
+}
+.modal-overlay.hidden {
+  display: none;
+}
+.confirm-modal {
+  width: min(390px, 100%);
+  padding: 18px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #d9e0ea;
+  color: #111827;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .28);
+}
+.confirm-modal h2 {
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 800;
+  margin-bottom: 8px;
+  letter-spacing: 0;
+}
+.confirm-modal p {
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 18px;
+  user-select: text;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.modal-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid #d9e0ea;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.modal-btn:hover {
+  background: #eef4ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+.modal-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.modal-btn.primary:hover {
+  background: var(--accent-h);
+  border-color: var(--accent-h);
+  color: #fff;
+}
+.modal-btn.danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+.modal-btn.danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
+}
+
 /* ── SCROLLBARS ────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -834,9 +913,21 @@ select.pi option { background: #2a2a2a; }
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="1.5" width="8" height="13" rx="1.8"/><circle cx="8" cy="3.6" r=".7" fill="currentColor" stroke="none"/></svg>Android
   </button>
   <div class="tb-sep"></div>
-  <button class="tb-btn" id="btn-project-import" title="Import project file">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 2.5h10v11H3z"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>Open
-  </button>
+  <div class="import-menu-wrap">
+    <button class="tb-btn" id="btn-project-import" title="Create or import a project" aria-haspopup="menu" aria-expanded="false">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 2.5h10v11H3z"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>Import
+    </button>
+    <div class="tb-menu hidden" id="import-menu" role="menu">
+      <button class="tb-menu-item" id="new-project-option" type="button" role="menuitem">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 3v10M3 8h10"/><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/></svg>
+        <span>New project</span>
+      </button>
+      <button class="tb-menu-item" id="import-project-option" type="button" role="menuitem">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 2.5h10v11H3z"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>
+        <span>Import project</span>
+      </button>
+    </div>
+  </div>
   <input id="project-import-input" type="file" accept=".mockup,application/json" hidden>
   <div class="export-menu-wrap">
     <button class="tb-btn" id="btn-export" title="Export project or mockups" aria-haspopup="menu" aria-expanded="false">
@@ -858,6 +949,17 @@ select.pi option { background: #2a2a2a; }
 <div id="export-status" class="hidden" role="status" aria-live="polite" aria-atomic="true">
   <div class="export-spinner"></div>
   <div id="export-status-text">Preparing export...</div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-message">
+  <div class="confirm-modal">
+    <h2 id="confirm-modal-title">Confirm action</h2>
+    <p id="confirm-modal-message">This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn" id="confirm-modal-cancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="confirm-modal-confirm">Continue</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── MAIN AREA ── -->
@@ -1178,6 +1280,8 @@ function init() {
   setupToolbar();
   setupCanvasChrome();
   setupPanelResize();
+  setupLeaveGuard();
+  setupVisibilityReturnPromptGuard();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1878,8 +1982,14 @@ function delCanvas(id) {
 function deleteCanvasWithConfirm(id) {
   const cv = S.canvases.find(c => c.id === id);
   if (!cv || S.canvases.length === 1) return;
-  if (!window.confirm(`Delete "${cv.name || 'Canvas'}"?`)) return;
-  delCanvas(id);
+  showConfirmModal({
+    title: 'Delete canvas?',
+    message: `Delete "${cv.name || 'Canvas'}"? This cannot be undone.`,
+    confirmText: 'Delete',
+    danger: true
+  }).then(confirmed => {
+    if (confirmed) delCanvas(id);
+  });
 }
 
 function setupCanvasChrome() {
@@ -3016,10 +3126,12 @@ function setupToolbar() {
   document.getElementById('btn-zoom-out').addEventListener('click', () => zoomOut());
   document.getElementById('btn-fit').addEventListener('click', fitCanvas);
   document.getElementById('btn-export').addEventListener('click', toggleExportMenu);
+  document.getElementById('btn-project-import').addEventListener('click', toggleImportMenu);
+  document.getElementById('new-project-option').addEventListener('click', () => runImportMenuAction(confirmNewProject));
+  document.getElementById('import-project-option').addEventListener('click', () => runImportMenuAction(confirmProjectImport));
   document.getElementById('export-project-option').addEventListener('click', () => runExportMenuAction(exportProject));
   document.getElementById('export-mockups-option').addEventListener('click', () => runExportMenuAction(exportPNG));
   const projectImportInput = document.getElementById('project-import-input');
-  document.getElementById('btn-project-import').addEventListener('click', () => projectImportInput.click());
   projectImportInput.addEventListener('change', async () => {
     const file = projectImportInput.files && projectImportInput.files[0];
     projectImportInput.value = '';
@@ -3054,11 +3166,28 @@ function setupToolbar() {
   });
 
   document.addEventListener('click', e => {
-    if (!e.target.closest('.export-menu-wrap')) hideExportMenu();
+    if (!e.target.closest('.export-menu-wrap') && !e.target.closest('.import-menu-wrap')) hideToolbarMenus();
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') hideExportMenu();
+    if (e.key === 'Escape') hideToolbarMenus();
   });
+}
+
+function toggleImportMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('import-menu');
+  const btn = document.getElementById('btn-project-import');
+  if (!menu || !btn) return;
+  hideExportMenu();
+  const isOpen = menu.classList.toggle('hidden') === false;
+  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function hideImportMenu() {
+  const menu = document.getElementById('import-menu');
+  const btn = document.getElementById('btn-project-import');
+  if (menu) menu.classList.add('hidden');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
 function toggleExportMenu(e) {
@@ -3066,6 +3195,7 @@ function toggleExportMenu(e) {
   const menu = document.getElementById('export-menu');
   const btn = document.getElementById('btn-export');
   if (!menu || !btn) return;
+  hideImportMenu();
   const isOpen = menu.classList.toggle('hidden') === false;
   btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
@@ -3080,6 +3210,144 @@ function hideExportMenu() {
 function runExportMenuAction(action) {
   hideExportMenu();
   action();
+}
+
+function hideToolbarMenus() {
+  hideImportMenu();
+  hideExportMenu();
+}
+
+function runImportMenuAction(action) {
+  hideImportMenu();
+  action();
+}
+
+async function confirmNewProject() {
+  const confirmed = await showConfirmModal({
+    title: 'Start a new project?',
+    message: 'All existing project data will be removed and replaced by a new starter project.',
+    confirmText: 'New project',
+    danger: true
+  });
+  if (confirmed) resetToStarterProject();
+}
+
+async function confirmProjectImport() {
+  const confirmed = await showConfirmModal({
+    title: 'Import project?',
+    message: 'All existing project data will be removed and replaced by the imported project.',
+    confirmText: 'Import project',
+    danger: true
+  });
+  if (confirmed) document.getElementById('project-import-input').click();
+}
+
+function showConfirmModal(options = {}) {
+  return showAppModal({
+    title: options.title || 'Confirm action',
+    message: options.message || 'This action cannot be undone.',
+    confirmText: options.confirmText || 'Continue',
+    cancelText: options.cancelText || 'Cancel',
+    danger: Boolean(options.danger),
+    showCancel: true
+  });
+}
+
+function showMessageModal(options = {}) {
+  return showAppModal({
+    title: options.title || 'Something went wrong',
+    message: options.message || '',
+    confirmText: options.confirmText || 'OK',
+    showCancel: false
+  });
+}
+
+function showAppModal(options) {
+  const overlay = document.getElementById('confirm-modal');
+  const title = document.getElementById('confirm-modal-title');
+  const message = document.getElementById('confirm-modal-message');
+  const cancel = document.getElementById('confirm-modal-cancel');
+  const confirm = document.getElementById('confirm-modal-confirm');
+  if (!overlay || !title || !message || !cancel || !confirm) return Promise.resolve(false);
+
+  hideToolbarMenus();
+  title.textContent = options.title;
+  message.textContent = options.message;
+  cancel.textContent = options.cancelText || 'Cancel';
+  confirm.textContent = options.confirmText || 'Continue';
+  cancel.style.display = options.showCancel === false ? 'none' : '';
+  confirm.classList.toggle('danger', Boolean(options.danger));
+  confirm.classList.toggle('primary', !options.danger);
+  overlay.classList.remove('hidden');
+  (options.danger && options.showCancel !== false ? cancel : confirm).focus();
+
+  return new Promise(resolve => {
+    let done = false;
+    const cleanup = result => {
+      if (done) return;
+      done = true;
+      overlay.classList.add('hidden');
+      confirm.removeEventListener('click', onConfirm);
+      cancel.removeEventListener('click', onCancel);
+      overlay.removeEventListener('pointerdown', onOverlayPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+      resolve(result);
+    };
+    const onConfirm = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    const onOverlayPointerDown = e => {
+      if (e.target === overlay && options.showCancel !== false) cleanup(false);
+    };
+    const onKeyDown = e => {
+      if (e.key === 'Escape' && options.showCancel !== false) cleanup(false);
+    };
+    confirm.addEventListener('click', onConfirm);
+    cancel.addEventListener('click', onCancel);
+    overlay.addEventListener('pointerdown', onOverlayPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+  });
+}
+
+function resetToStarterProject() {
+  S.canvases = [];
+  S.activeId = null;
+  S.selIds = [];
+  S.clipboard = [];
+  S.tool = 'select';
+  S.zoom = DEFAULT_ZOOM;
+  S.mockupGap = 8;
+  S.history = [];
+  S.hIdx = -1;
+  _elSeq = 0;
+  _cvSeq = 0;
+  const cv = starterCanvasTemplate();
+  S.canvases.push(cv);
+  S.activeId = cv.id;
+  setTool('select');
+  snap();
+  renderAll();
+  syncZoomInput();
+  requestAnimationFrame(() => {
+    const ws = document.getElementById('workspace');
+    if (ws) {
+      ws.scrollLeft = 0;
+      ws.scrollTop = 0;
+    }
+  });
+}
+
+function setupLeaveGuard() {
+  window.addEventListener('beforeunload', event => {
+    event.preventDefault();
+    event.returnValue = '';
+    return '';
+  });
+}
+
+function setupVisibilityReturnPromptGuard() {
+  document.addEventListener('visibilitychange', event => {
+    if (document.visibilityState === 'visible') event.preventDefault();
+  });
 }
 
 function setupPanelResize() {
@@ -3336,7 +3604,11 @@ async function importProjectFile(file) {
     requestAnimationFrame(() => restoreWorkspaceScroll(state.workspaceScroll));
   } catch (error) {
     console.error(error);
-    window.alert('Could not import this project file.');
+    await showMessageModal({
+      title: 'Import failed',
+      message: 'Could not import this project file.',
+      confirmText: 'OK'
+    });
   }
 }
 

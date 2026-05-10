@@ -24,16 +24,18 @@ This project is a static vanilla HTML/CSS/JS mockup generator website. There is 
 - **Project files and autosave:** `exportProject()`, `importProjectFile()`, `buildProjectPayload()`, `normalizeProjectState()`, `saveAutosaveState()`, `loadAutosaveState()`, and `applyProjectState()` save and restore `.mockup` files and local autosave data with canvases, selection, zoom, mockup gap, and workspace scroll.
 - **Export:** `exportPNG()` exports all canvases as exact-size PNGs, using `html2canvas` when available and falling back to canvas drawing helpers such as `drawElCtx()` and `drawFrameCtx()`. Multi-canvas exports are zipped. Export uses an offscreen capture surface and shows the small export status card while it works.
 
-## Autosave And Reload Behavior
+## Autosave And Leave Behavior
 
-- The editor does not register a native `beforeunload` handler. Avoid adding one back because it can trigger disruptive browser leave-site dialogs during normal window switching in some environments.
+- The editor registers a native `beforeunload` handler so browser back, refresh, and close actions show the browser-controlled leave-site confirmation.
 - The editor autosaves the current project to `localStorage` under `mockup-generator-autosave` whenever `snap()` records a new history state.
 - On editor startup, `init()` attempts to restore the autosaved project before creating a fresh default canvas. Autosave uses the same payload shape as `.mockup` project export/import.
 - Manual `.mockup` export/import is still the portable backup format; local autosave is only a browser-local recovery safety net.
 
 ## Toolbar Flow
 
-- `Open` imports a `.mockup` project file and restores the editor close to where the user left it.
+- `Import` opens a menu with `New project` and `Import project`.
+- `New project` shows a centered confirmation popup, then replaces the current work with the starter project.
+- `Import project` shows a centered confirmation popup, then imports a `.mockup` project file and restores the editor close to where the user left it.
 - `Export` opens a menu with `Project` and `Mockups`.
 - `Project` downloads a `.mockup` file for later import.
 - `Mockups` exports the canvas images as PNG files, or `mockups.zip` when there is more than one canvas.
@@ -68,7 +70,7 @@ git diff --check
 
 - Preserve `S.activeId` and `S.selIds` when changing canvas or selection behavior in `editor.html`.
 - Keep editor behavior tests pointed at `editor.html`; `index.html` is the landing page and should not contain editor initialization such as `init();`.
-- Do not add `beforeunload`/`event.returnValue` reload protection. Prefer autosave or in-app prompts for data safety.
+- Keep `beforeunload`/`event.returnValue` reload protection in sync with the in-app destructive prompts.
 - If changing autosave or project import/export, keep `.mockup` payloads and `localStorage` autosave restoration in sync.
 - If changing zoom or multi-canvas layout, check both `createCanvasShell()` and `fitCanvas()`.
 - If changing top canvas buttons, update `createCanvasChrome()` and the related CSS near `CANVAS TOP CHROME`.
