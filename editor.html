@@ -306,6 +306,10 @@ body {
 .el.overflow-ghost {
   pointer-events: none;
 }
+.el.overflow-ghost.is-transferable {
+  pointer-events: auto;
+  cursor: move;
+}
 .el svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
 .el .text-inner {
   position: absolute;
@@ -1372,6 +1376,11 @@ const FRAME_COLOR = '#070707';
 
 const activeCV = () => S.canvases.find(c => c.id === S.activeId) || S.canvases[0];
 const getEl    = id => { const cv = activeCV(); return cv ? cv.elements.find(e => e.id === id) : null; };
+const canvasById = id => S.canvases.find(c => c.id === id) || null;
+const getElInCanvas = (id, canvasId) => {
+  const cv = canvasById(canvasId);
+  return cv ? cv.elements.find(e => e.id === id) : null;
+};
 const PROJECT_FILE_VERSION = 1;
 const AUTOSAVE_STORAGE_KEY = 'mockup-generator-autosave';
 const PATREON_SUPPORT_URL = 'https://www.patreon.com/posts/one-developer-no-157857073?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link';
@@ -1592,6 +1601,30 @@ function renderAllCanvases() {
   }
 }
 
+function syncActiveCanvasDomIds() {
+  document.querySelectorAll('.canvas-container').forEach(cvel => {
+    const canvasId = cvel.dataset.canvasId;
+    if (!canvasId) return;
+    const isActive = canvasId === S.activeId;
+    cvel.id = isActive ? 'cv-el' : `cv-el-${canvasId}`;
+
+    const rubberBand = cvel.querySelector('[id^="rubber-band"]');
+    if (rubberBand) rubberBand.id = isActive ? 'rubber-band' : `rubber-band-${canvasId}`;
+
+    const selBox = cvel.querySelector('[id^="sel-box"]');
+    if (selBox) selBox.id = isActive ? 'sel-box' : `sel-box-${canvasId}`;
+  });
+}
+
+function activateCanvasForInteraction(canvasId) {
+  if (!canvasId || canvasId === S.activeId || !canvasById(canvasId)) return;
+  S.activeId = canvasId;
+  S.selIds = [];
+  syncActiveCanvasDomIds();
+  renderPanel();
+  updateCanvasChrome();
+}
+
 // Canvas rendering is intentionally split into small "component" builders.
 // Future AI edits should usually change one helper below instead of touching
 // renderAllCanvases(), which only orchestrates the pieces.
@@ -1779,6 +1812,7 @@ function selectElement(id, additive) {
 function renderElInContainer(el, root, canvasId, opts = {}) {
   const interactive = opts.interactive !== false;
   const ghost = opts.ghost === true;
+  const transferableGhost = opts.transferableGhost === true;
   let div = root.querySelector(`.el[data-id="${el.id}"]`);
   const fresh = !div;
   if (fresh) {
@@ -1790,7 +1824,8 @@ function renderElInContainer(el, root, canvasId, opts = {}) {
     if (interactive) bindElEvents(div);
   }
   div.classList.toggle('overflow-ghost', ghost);
-  div.setAttribute('aria-hidden', ghost ? 'true' : 'false');
+  div.classList.toggle('is-transferable', transferableGhost);
+  div.setAttribute('aria-hidden', ghost && !transferableGhost ? 'true' : 'false');
 
   // Position / size
   div.style.left    = el.x + 'px';
@@ -1818,6 +1853,7 @@ function renderElInContainer(el, root, canvasId, opts = {}) {
   if (isActive && interactive) {
     syncHandles(div, el);
   }
+  return div;
 }
 
 function clampUi(value, min, max) {
@@ -1863,13 +1899,19 @@ function renderOverflowMirrors() {
 function renderOverflowForCanvas(targetCv, root, canvasId, opts = {}) {
   const targetIndex = S.canvases.findIndex(c => c.id === targetCv.id);
   if (targetIndex < 0) return;
+  const gapUnits = canvasGapUnits();
 
   const prev = S.canvases[targetIndex - 1];
   if (prev) {
     prev.elements
       .filter(el => elementVisualBounds(el).right > prev.width)
       .forEach(el => {
-        renderOverflowGhost(el, root, canvasId, el.x - prev.width, el.y, 'from-prev', opts);
+        renderOverflowGhost(el, root, canvasId, el.x - prev.width - gapUnits, el.y, 'from-prev', {
+          ...opts,
+          sourceCanvasId: prev.id,
+          targetCanvasId: targetCv.id,
+          targetCv,
+        });
       });
   }
 
@@ -1878,9 +1920,18 @@ function renderOverflowForCanvas(targetCv, root, canvasId, opts = {}) {
     next.elements
       .filter(el => elementVisualBounds(el).left < 0)
       .forEach(el => {
-        renderOverflowGhost(el, root, canvasId, targetCv.width + el.x, el.y, 'from-next', opts);
+        renderOverflowGhost(el, root, canvasId, targetCv.width + gapUnits + el.x, el.y, 'from-next', {
+          ...opts,
+          sourceCanvasId: next.id,
+          targetCanvasId: targetCv.id,
+          targetCv,
+        });
       });
   }
+}
+
+function canvasGapUnits() {
+  return S.mockupGap / Math.max(S.zoom, 0.04);
 }
 
 function elementVisualBounds(el) {
@@ -1920,7 +1971,20 @@ function renderOverflowGhost(sourceEl, root, canvasId, x, y, direction, opts = {
   ghost.id = `overflow-${direction}-${sourceEl.id}`;
   ghost.x = x;
   ghost.y = y;
-  renderElInContainer(ghost, root, canvasId, { interactive: false, ghost: true, ...opts });
+  const transferableGhost = !!(opts.sourceCanvasId && opts.targetCanvasId);
+  const div = renderElInContainer(ghost, root, canvasId, {
+    interactive: false,
+    ghost: true,
+    transferableGhost,
+    ...opts,
+  });
+  if (!div) return;
+  div.dataset.sourceId = sourceEl.id;
+  div.dataset.sourceCanvasId = opts.sourceCanvasId || '';
+  div.dataset.targetCanvasId = opts.targetCanvasId || '';
+  div.dataset.targetX = x;
+  div.dataset.targetY = y;
+  if (transferableGhost) bindOverflowGhostEvents(div);
 }
 
 function drawElVisual(div, el) {
@@ -2830,6 +2894,7 @@ function refreshEl(el) {
 // ═══════════════════════════════════════════════════════════
 function renderSelBox() {
   const sb = document.getElementById('sel-box');
+  if (!sb) return;
   if (S.selIds.length < 2) { sb.style.display = 'none'; return; }
   const cv = activeCV(); if (!cv) return;
   let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;
@@ -2883,6 +2948,128 @@ function captureInteractionPointer(target, pointerId) {
   try { target.setPointerCapture(pointerId); } catch (err) {}
 }
 
+const DRAG_TRANSFER_TOLERANCE = 1;
+
+function canvasRootForId(canvasId) {
+  return [...document.querySelectorAll('.canvas-container')].find(node => node.dataset.canvasId === canvasId) || null;
+}
+
+function elementNodeForDrag(id, canvasId) {
+  return [...document.querySelectorAll('.canvas-container .el:not(.overflow-ghost)')]
+    .find(node => node.dataset.id === id && node.dataset.canvasId === canvasId) || null;
+}
+
+function rectContainsPoint(rect, point, tolerance = DRAG_TRANSFER_TOLERANCE) {
+  return point.x >= rect.left - tolerance &&
+    point.y >= rect.top - tolerance &&
+    point.x <= rect.right + tolerance &&
+    point.y <= rect.bottom + tolerance;
+}
+
+function dragElementScreenAnchor(sourceRoot, el) {
+  const rootRect = sourceRoot.getBoundingClientRect();
+  return {
+    x: rootRect.left + el.x * S.zoom,
+    y: rootRect.top + el.y * S.zoom,
+  };
+}
+
+function dragTransferItems(sourceCv) {
+  const sourceRoot = canvasRootForId(sourceCv.id);
+  if (!sourceRoot) return [];
+
+  return IX.origPositions.map(orig => {
+    const el = sourceCv.elements.find(item => item.id === orig.id);
+    const node = elementNodeForDrag(orig.id, sourceCv.id);
+    if (!el || !node) return null;
+    const anchor = dragElementScreenAnchor(sourceRoot, el);
+    const rect = node.getBoundingClientRect();
+    const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    return { id: orig.id, el, rect, center, anchor };
+  }).filter(Boolean);
+}
+
+function findDragTransferTarget(sourceCanvasId, items) {
+  if (!items.length) return null;
+
+  for (const cv of S.canvases) {
+    if (cv.id === sourceCanvasId) continue;
+    const root = canvasRootForId(cv.id);
+    if (!root) continue;
+    const rect = root.getBoundingClientRect();
+    if (items.every(item => rectContainsPoint(rect, item.center))) {
+      return { cv, root, rect };
+    }
+  }
+  return null;
+}
+
+function nextZForCanvas(cv) {
+  if (!cv || !cv.elements.length) return 1;
+  return Math.max(...cv.elements.map(el => el.zIndex)) + 1;
+}
+
+function maybeTransferDraggedElements() {
+  const sourceCv = activeCV();
+  if (!sourceCv || !IX.origPositions.length) return false;
+
+  const items = dragTransferItems(sourceCv);
+  if (items.length !== IX.origPositions.length) return false;
+
+  const target = findDragTransferTarget(sourceCv.id, items);
+  if (!target) return false;
+
+  const movedIds = items.map(item => item.id);
+  const movedIdSet = new Set(movedIds);
+  const maxTargetZ = nextZForCanvas(target.cv) - 1;
+
+  sourceCv.elements = sourceCv.elements.filter(el => !movedIdSet.has(el.id));
+  items.forEach((item, index) => {
+    item.el.x = (item.anchor.x - target.rect.left) / S.zoom;
+    item.el.y = (item.anchor.y - target.rect.top) / S.zoom;
+    item.el.zIndex = maxTargetZ + index + 1;
+    target.cv.elements.push(item.el);
+  });
+
+  S.activeId = target.cv.id;
+  S.selIds = movedIds;
+  return true;
+}
+
+function transferOverflowGhostToCanvas(div) {
+  const sourceCv = S.canvases.find(cv => cv.id === div.dataset.sourceCanvasId);
+  const targetCv = S.canvases.find(cv => cv.id === div.dataset.targetCanvasId);
+  if (!sourceCv || !targetCv || sourceCv.id === targetCv.id) return false;
+
+  const el = sourceCv.elements.find(item => item.id === div.dataset.sourceId);
+  if (!el || el.locked) return false;
+
+  const x = Number(div.dataset.targetX);
+  const y = Number(div.dataset.targetY);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+
+  sourceCv.elements = sourceCv.elements.filter(item => item.id !== el.id);
+  el.x = x;
+  el.y = y;
+  el.zIndex = nextZForCanvas(targetCv);
+  targetCv.elements.push(el);
+
+  S.activeId = targetCv.id;
+  S.selIds = [el.id];
+  snap();
+  renderAll();
+  return true;
+}
+
+function bindOverflowGhostEvents(div) {
+  div.addEventListener('pointerdown', e => {
+    if (IX.mode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    transferOverflowGhostToCanvas(div);
+  });
+}
+
 // ═══════════════════════════════════════════════════════════
 // WORKSPACE INTERACTIONS
 // ═══════════════════════════════════════════════════════════
@@ -2899,8 +3086,8 @@ function setupWorkspace() {
     
     const canvasId = canvasEl.dataset.canvasId;
     if (canvasId && canvasId !== S.activeId) {
-      S.activeId = canvasId;
-      clearSelection();
+      activateCanvasForInteraction(canvasId);
+      renderAll();
       return;
     }
     
@@ -2963,7 +3150,8 @@ function beginRubber(e) {
 
 function bindElEvents(div) {
   div.addEventListener('dblclick', e => {
-    const el = getEl(div.dataset.id);
+    activateCanvasForInteraction(div.dataset.canvasId);
+    const el = getElInCanvas(div.dataset.id, div.dataset.canvasId);
     if (!el || el.locked) return;
     if (el.type === 'text') {
       const inner = div.querySelector('.text-inner');
@@ -2991,7 +3179,8 @@ function bindElEvents(div) {
     if (e.target.classList.contains('text-inner') && e.target.contentEditable === 'true') return;
     if (e.target.classList.contains('text-inner') && e.detail > 1) return;
     const id = div.dataset.id;
-    const el = getEl(id); if (!el || el.locked) return;
+    activateCanvasForInteraction(div.dataset.canvasId);
+    const el = getElInCanvas(id, div.dataset.canvasId); if (!el || el.locked) return;
     e.stopPropagation();
     if (!S.selIds.includes(id)) {
       selectElement(id, e.shiftKey);
@@ -3013,7 +3202,8 @@ function bindElEvents(div) {
     if (IX.mode) return;
     if (!e.target.classList.contains('rh')) return;
     e.stopPropagation();
-    const id = div.dataset.id; const el = getEl(id); if (!el) return;
+    activateCanvasForInteraction(div.dataset.canvasId);
+    const id = div.dataset.id; const el = getElInCanvas(id, div.dataset.canvasId); if (!el) return;
     IX.mode = e.target.dataset.h === 'rot' ? 'rotate' : 'resize';
     IX.pointerId = e.pointerId;
     IX.elId = id; IX.handle = e.target.dataset.h;
@@ -3091,7 +3281,10 @@ function finishDragInteraction() {
   if (SS.snappedX) { SS.snappedX = false; SS.snapEdgeFnX = null; scheduleGuideHide('x'); }
   if (SS.snappedY) { SS.snappedY = false; SS.snapEdgeFnY = null; scheduleGuideHide('y'); }
   SS.lerpOffX = 0; SS.lerpOffY = 0; SS.targetOffX = 0; SS.targetOffY = 0;
-  snap(); renderPanel(); updateCanvasChrome();
+  const didTransfer = maybeTransferDraggedElements();
+  snap();
+  if (didTransfer) renderAll();
+  else { renderPanel(); updateCanvasChrome(); }
 }
 
 function finishTransformInteraction() {

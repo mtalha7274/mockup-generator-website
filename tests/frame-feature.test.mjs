@@ -207,6 +207,36 @@ test('overflow mirrors use rotated visual bounds at canvas edges', () => {
   assert.match(html, /elementVisualBounds\(el\)\.left\s*<\s*0/);
 });
 
+test('dragging elements fully into another canvas transfers ownership', () => {
+  assert.match(html, /const DRAG_TRANSFER_TOLERANCE\s*=\s*1/);
+  assert.match(html, /function canvasGapUnits\(\)/);
+  assert.match(html, /function dragTransferItems\(sourceCv\)/);
+  assert.match(html, /node\.getBoundingClientRect\(\)/);
+  assert.match(html, /function findDragTransferTarget\(sourceCanvasId,\s*items\)/);
+  assert.match(html, /function rectContainsPoint\(rect,\s*point/);
+  assert.match(html, /items\.every\(item => rectContainsPoint\(rect,\s*item\.center\)\)/);
+  assert.match(html, /function maybeTransferDraggedElements\(\)/);
+  assert.match(html, /sourceCv\.elements = sourceCv\.elements\.filter\(el => !movedIdSet\.has\(el\.id\)\)/);
+  assert.match(html, /S\.activeId = target\.cv\.id;\s*S\.selIds = movedIds;/);
+  assert.match(html, /const didTransfer = maybeTransferDraggedElements\(\);\s*snap\(\);\s*if \(didTransfer\) renderAll\(\);/);
+});
+
+test('overflow mirrors can transfer and become selectable', () => {
+  assert.match(html, /\.el\.overflow-ghost\.is-transferable\s*\{[\s\S]*pointer-events:\s*auto;/);
+  assert.match(html, /classList\.toggle\('is-transferable',\s*transferableGhost\)/);
+  assert.match(html, /const transferableGhost = !!\(opts\.sourceCanvasId && opts\.targetCanvasId\)/);
+  assert.match(html, /bindOverflowGhostEvents\(div\)/);
+  assert.match(html, /function transferOverflowGhostToCanvas\(div\)/);
+  assert.match(html, /S\.activeId = targetCv\.id;\s*S\.selIds = \[el\.id\];\s*snap\(\);\s*renderAll\(\);/);
+});
+
+test('element pointer events activate their own canvas before lookup', () => {
+  assert.match(html, /const getElInCanvas = \(id,\s*canvasId\) =>/);
+  assert.match(html, /function activateCanvasForInteraction\(canvasId\)/);
+  assert.match(html, /syncActiveCanvasDomIds\(\)/);
+  assert.match(html, /activateCanvasForInteraction\(div\.dataset\.canvasId\);\s*const el = getElInCanvas\(id,\s*div\.dataset\.canvasId\);/);
+});
+
 test('export rendering uses an isolated canvas surface without workspace shadows', () => {
   assert.match(html, /container\.className\s*=\s*'export-canvas'/);
   assert.match(html, /container\.style\.boxShadow\s*=\s*'none'/);
